@@ -7,26 +7,52 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
 const ROLES = [
-  { id: 'batsman',    label: 'Batsman',     short: 'BAT',      color: '#3498db' },
-  { id: 'bowler',     label: 'Bowler',      short: 'BOWL',     color: '#2ecc71' },
-  { id: 'allrounder', label: 'All-rounder', short: 'BAT+BOWL', color: '#f0a500' },
+  { id: 'batsman',    label: 'Batsman',     color: '#3498db' },
+  { id: 'bowler',     label: 'Bowler',      color: '#2ecc71' },
+  { id: 'allrounder', label: 'All-rounder', color: '#f0a500' },
 ];
+
+function BatIcon({ size = 13 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
+      <rect x="8.5" y="1" width="3" height="13" rx="1.5" transform="rotate(0 10 10)" />
+      <rect x="6" y="13" width="8" height="4" rx="2" />
+    </svg>
+  );
+}
+
+function BallIcon({ size = 11 }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
+      <circle cx="10" cy="10" r="9" />
+      <path d="M4 10 Q10 6 16 10" stroke="white" strokeWidth="1.2" fill="none" opacity="0.5" />
+      <path d="M4 10 Q10 14 16 10" stroke="white" strokeWidth="1.2" fill="none" opacity="0.5" />
+    </svg>
+  );
+}
+
+function RoleIcon({ role }) {
+  if (role === 'batsman')    return <BatIcon />;
+  if (role === 'bowler')     return <BallIcon />;
+  return <span style={{ display:'inline-flex', alignItems:'center', gap: 2 }}><BatIcon /><BallIcon /></span>;
+}
 
 export function RoleBadge({ role, small }) {
   const r = ROLES.find(x => x.id === role) || ROLES[2];
   return (
     <span style={{
+      display: 'inline-flex', alignItems: 'center', gap: 4,
       background: r.color + '22',
       color: r.color,
       border: `1px solid ${r.color}55`,
       borderRadius: 20,
       padding: small ? '2px 8px' : '3px 10px',
-      fontSize: small ? '0.68rem' : '0.75rem',
-      fontWeight: 800,
+      fontSize: small ? '0.7rem' : '0.78rem',
+      fontWeight: 700,
       whiteSpace: 'nowrap',
-      letterSpacing: '0.3px',
     }}>
-      {small ? r.short : r.label}
+      <RoleIcon role={role} />
+      {!small && r.label}
     </span>
   );
 }
@@ -126,7 +152,7 @@ export default function Players() {
                     textAlign: 'center',
                   }}
                 >
-                  {r.short}<br /><span style={{ fontWeight: 400, fontSize: '0.72rem' }}>{r.label}</span>
+                  <RoleIcon role={r.id} /><br /><span style={{ fontWeight: 600, fontSize: '0.72rem' }}>{r.label}</span>
                 </button>
               ))}
             </div>
