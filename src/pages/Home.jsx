@@ -296,46 +296,49 @@ export default function Home() {
             </div>
           )}
 
-          {/* Squad button (for live/completed) */}
-          {!isUpcoming && (
-            <button
-              onClick={e => { e.preventDefault(); e.stopPropagation(); setSquadMatch(match); }}
-              style={{
-                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 600,
-                color: 'var(--text-muted)', cursor: 'pointer', marginRight: 8,
-              }}
-            >
-              👥 Squads
-            </button>
-          )}
+          {/* Action buttons row */}
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+            {!isUpcoming && (
+              <button
+                onClick={e => { e.preventDefault(); e.stopPropagation(); setSquadMatch(match); }}
+                style={{
+                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 600,
+                  color: 'var(--text-muted)', cursor: 'pointer',
+                }}
+              >
+                👥 Squads
+              </button>
+            )}
 
-          {isUpcoming && isAdmin && (
-            <button
-              onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/match/${match.id}`); }}
-              style={{
-                background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)',
-                borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
-                color: 'var(--accent)', cursor: 'pointer',
-              }}
-            >
-              🏏 Start Match
-            </button>
-          )}
+            {isUpcoming && isAdmin && (
+              <button
+                onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/match/${match.id}`); }}
+                style={{
+                  background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)',
+                  borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
+                  color: 'var(--accent)', cursor: 'pointer',
+                }}
+              >
+                🏏 Start Match
+              </button>
+            )}
+
+            {isAdmin && (
+              <button
+                onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(e, match.id); }}
+                style={{
+                  marginLeft: 'auto',
+                  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                  borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
+                  color: 'var(--danger-light)', cursor: 'pointer',
+                }}
+              >
+                🗑️ Delete
+              </button>
+            )}
+          </div>
         </Link>
-
-        {isAdmin && (
-          <button
-            onClick={e => handleDelete(e, match.id)}
-            style={{
-              position: 'absolute', right: 10, top: 10,
-              background: 'none', border: 'none', color: 'var(--danger-light)',
-              fontSize: '1rem', cursor: 'pointer', padding: '4px',
-            }}
-          >
-            🗑️
-          </button>
-        )}
       </div>
     );
   }
