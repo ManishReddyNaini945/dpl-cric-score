@@ -571,9 +571,27 @@ export default function NewMatch() {
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={reshuffleTeams}>
                 🔀 Reshuffle
               </button>
-              <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => setStep(3)}>
-                Proceed to Toss →
-              </button>
+              {scheduledAt ? (
+                <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={async () => {
+                  setSaving(true);
+                  try {
+                    await addDoc(collection(db, 'matches'), {
+                      meta: buildMatchMeta('upcoming'),
+                      innings: [],
+                      currentInnings: 0,
+                      createdAt: serverTimestamp(),
+                    });
+                    navigate('/');
+                  } catch (err) { alert('Error.'); console.error(err); }
+                  setSaving(false);
+                }}>
+                  {saving ? 'Saving…' : '📅 Save as Upcoming'}
+                </button>
+              ) : (
+                <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => setStep(3)}>
+                  Proceed to Toss →
+                </button>
+              )}
             </div>
           </div>
         )}
@@ -660,12 +678,9 @@ export default function NewMatch() {
                     </span>{' '}elected to <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{elected}</span> first
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                  <button className="btn btn-ghost" style={{ flex: 1, minWidth: 80 }} onClick={reflip}>Reflip</button>
-                  <button className="btn btn-secondary" style={{ flex: 1, minWidth: 120 }} disabled={!elected || saving} onClick={() => saveUpcoming()}>
-                    📅 Save Upcoming
-                  </button>
-                  <button className="btn btn-primary" style={{ flex: 2, minWidth: 120 }} disabled={!elected || saving} onClick={startMatch}>
+                <div style={{ display: 'flex', gap: 10 }}>
+                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={reflip}>Reflip</button>
+                  <button className="btn btn-primary" style={{ flex: 2 }} disabled={!elected || saving} onClick={startMatch}>
                     {saving ? 'Starting…' : '🏏 Start Match!'}
                   </button>
                 </div>

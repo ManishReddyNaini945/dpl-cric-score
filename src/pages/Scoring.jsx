@@ -14,6 +14,129 @@ import BowlerSelectModal from '../components/BowlerSelectModal';
 
 const EXTRA_MODES = { NONE: 'none', WIDE: 'wide', NOBALL: 'noball', BYE: 'bye', LEGBYE: 'legbye' };
 
+function TossScreen({ match, matchId, navigate, isAdmin }) {
+  const meta = match.meta;
+  const [tossState, setTossState] = useState('idle');
+  const [tossWinner, setTossWinner] = useState('');
+  const [elected, setElected] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  function flipCoin() {
+    if (tossState !== 'idle') return;
+    setTossState('flipping');
+    setElected('');
+    const winner = Math.random() < 0.5 ? 'team1' : 'team2';
+    setTimeout(() => { setTossWinner(winner); setTossState('done'); }, 2200);
+  }
+
+  async function startMatch() {
+    if (!elected || saving) return;
+    setSaving(true);
+    const battingTeamKey = tossWinner === 'team1'
+      ? (elected === 'bat' ? 'team1' : 'team2')
+      : (elected === 'bat' ? 'team2' : 'team1');
+    const bowlingTeamKey = battingTeamKey === 'team1' ? 'team2' : 'team1';
+    const battingNames = battingTeamKey === 'team1' ? meta.players1 : meta.players2;
+
+    let innings = makeEmptyInnings(battingTeamKey, bowlingTeamKey, meta.playerCount);
+    innings = addBatsmanToInnings(innings, battingNames[0]);
+    innings = addBatsmanToInnings(innings, battingNames[1]);
+    innings.striker = battingNames[0];
+    innings.nonStriker = battingNames[1];
+
+    try {
+      await updateDoc(doc(db, 'matches', matchId), {
+        'meta.status': 'live',
+        'meta.tossWinner': tossWinner,
+        'meta.elected': elected,
+        innings: [innings],
+        currentInnings: 0,
+      });
+    } catch (err) { console.error(err); setSaving(false); }
+  }
+
+  if (!isAdmin) {
+    return (
+      <div style={{ minHeight: '100dvh', background: 'var(--green-dark)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
+        <div style={{ fontSize: '3rem' }}>📅</div>
+        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--white)' }}>{meta.team1} vs {meta.team2}</div>
+        <div className="text-muted" style={{ fontSize: '0.88rem' }}>Match hasn't started yet</div>
+        <Link to="/" className="btn btn-ghost mt-16">← Back</Link>
+      </div>
+    );
+  }
+
+  return (
+    <div style={{ minHeight: '100dvh', background: 'var(--green-dark)' }}>
+      <div className="app-header">
+        <button className="back-btn" onClick={() => navigate('/')}>←</button>
+        <h1>Toss</h1>
+      </div>
+      <div className="page" style={{ textAlign: 'center' }}>
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontWeight: 700, fontSize: '1.05rem' }}>
+            {meta.team1} <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>vs</span> {meta.team2}
+          </div>
+          <div className="text-muted" style={{ fontSize: '0.82rem', marginTop: 4 }}>{meta.overs} overs</div>
+        </div>
+
+        <div style={{ marginBottom: 28 }}>
+          <div
+            onClick={tossState === 'idle' ? flipCoin : undefined}
+            style={{
+              width: 100, height: 100, borderRadius: '50%', margin: '0 auto',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: '2.8rem', cursor: tossState === 'idle' ? 'pointer' : 'default',
+              background: tossState === 'done' ? 'linear-gradient(135deg, var(--accent), #0284c7)' : 'var(--surface)',
+              border: '3px solid var(--accent)', boxShadow: '0 4px 20px rgba(56,189,248,0.3)',
+              animation: tossState === 'flipping' ? 'coinSpin 2.2s ease-out forwards' : 'none',
+            }}
+          >
+            {tossState === 'done' ? '🏆' : '🪙'}
+          </div>
+          <style>{`@keyframes coinSpin{0%{transform:rotateY(0deg) scale(1)}20%{transform:rotateY(360deg) scale(1.1)}60%{transform:rotateY(1080deg) scale(1)}100%{transform:rotateY(1800deg) scale(1)}}`}</style>
+        </div>
+
+        {tossState === 'idle' && <button className="btn btn-primary" style={{ padding: '14px 40px', fontSize: '1.1rem' }} onClick={flipCoin}>🪙 Flip Coin</button>}
+        {tossState === 'flipping' && <div style={{ color: 'var(--accent)', fontWeight: 700, fontSize: '1.1rem' }}>Flipping…</div>}
+
+        {tossState === 'done' && (
+          <div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, color: 'var(--accent)', marginBottom: 6 }}>
+              {tossWinner === 'team1' ? meta.team1 : meta.team2} won the toss!
+            </div>
+            <div className="text-muted" style={{ marginBottom: 20, fontSize: '0.85rem' }}>Choose to bat or bowl first</div>
+            <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 20 }}>
+              {['bat', 'bowl'].map(choice => (
+                <button key={choice} onClick={() => setElected(choice)} style={{
+                  padding: '14px 28px', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: '1rem',
+                  border: `2px solid ${elected === choice ? (choice === 'bat' ? 'var(--accent)' : '#a78bfa') : 'rgba(255,255,255,0.15)'}`,
+                  background: elected === choice ? (choice === 'bat' ? 'rgba(56,189,248,0.15)' : 'rgba(167,139,250,0.15)') : 'var(--surface)',
+                  color: elected === choice ? (choice === 'bat' ? 'var(--accent)' : '#a78bfa') : 'var(--white)',
+                }}>
+                  {choice === 'bat' ? '🏏 Bat' : '🎳 Bowl'}
+                </button>
+              ))}
+            </div>
+            {elected && (
+              <div className="card mt-12" style={{ textAlign: 'center', marginBottom: 16, color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{tossWinner === 'team1' ? meta.team1 : meta.team2}</span>
+                {' '}elected to <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{elected}</span> first
+              </div>
+            )}
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setTossState('idle'); setTossWinner(''); setElected(''); }}>Reflip</button>
+              <button className="btn btn-primary" style={{ flex: 2 }} disabled={!elected || saving} onClick={startMatch}>
+                {saving ? 'Starting…' : '🏏 Start Match!'}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Scoring() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -200,6 +323,11 @@ export default function Scoring() {
         <Link to="/" className="btn btn-ghost mt-16">← Back</Link>
       </div>
     );
+  }
+
+  // Upcoming match — show toss for admin
+  if (meta?.status === 'upcoming') {
+    return <TossScreen match={match} matchId={id} navigate={navigate} isAdmin={isAdmin} />;
   }
 
   // Innings break screen

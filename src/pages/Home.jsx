@@ -81,6 +81,12 @@ export default function Home() {
   const [matches, setMatches] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('live');
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const t = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(t);
+  }, []);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [squadMatch, setSquadMatch] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
@@ -190,21 +196,28 @@ export default function Home() {
   function formatScheduled(ts) {
     if (!ts) return null;
     const d = new Date(ts);
-    const now = new Date();
     const diffMs = d - now;
-    const diffH = Math.round(diffMs / 3600000);
-    const diffD = Math.floor(diffMs / 86400000);
 
     const dateStr = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
     const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
 
     let countdown = '';
-    if (diffMs < 0) countdown = 'Starting soon';
-    else if (diffH < 1) countdown = 'Less than 1 hr away';
-    else if (diffH < 24) countdown = `${diffH}h away`;
-    else countdown = `${diffD}d away`;
+    if (diffMs <= 0) {
+      countdown = 'Starting soon';
+    } else {
+      const totalSecs = Math.floor(diffMs / 1000);
+      const days  = Math.floor(totalSecs / 86400);
+      const hours = Math.floor((totalSecs % 86400) / 3600);
+      const mins  = Math.floor((totalSecs % 3600) / 60);
+      const secs  = totalSecs % 60;
 
-    return { dateStr, timeStr, countdown };
+      if (days > 0)       countdown = `${days}d ${hours}h ${mins}m`;
+      else if (hours > 0) countdown = `${hours}h ${mins}m ${secs}s`;
+      else if (mins > 0)  countdown = `${mins}m ${secs}s`;
+      else                countdown = `${secs}s`;
+    }
+
+    return { dateStr, timeStr, countdown, isPast: diffMs <= 0 };
   }
 
   function renderSquadInline(players, roles, cap, vc, teamName, accentColor) {
@@ -268,18 +281,34 @@ export default function Home() {
           {/* Scheduled time banner for upcoming */}
           {isUpcoming && scheduled && (
             <div style={{
-              display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
-              background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.18)',
-              borderRadius: 8, padding: '7px 12px',
+              marginBottom: 10, borderRadius: 10, overflow: 'hidden',
+              border: `1px solid ${scheduled.isPast ? 'rgba(250,204,21,0.3)' : 'rgba(56,189,248,0.2)'}`,
             }}>
-              <span style={{ fontSize: '1.1rem' }}>📅</span>
-              <div>
-                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--white)' }}>
-                  {scheduled.dateStr} · {scheduled.timeStr}
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 10,
+                padding: '8px 12px',
+                background: scheduled.isPast ? 'rgba(250,204,21,0.06)' : 'rgba(56,189,248,0.06)',
+              }}>
+                <span style={{ fontSize: '1.1rem' }}>📅</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--white)' }}>
+                    {scheduled.dateStr} · {scheduled.timeStr}
+                  </div>
                 </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 600 }}>
-                  {scheduled.countdown}
-                </div>
+              </div>
+              <div style={{
+                padding: '6px 12px',
+                background: scheduled.isPast ? 'rgba(250,204,21,0.1)' : 'rgba(56,189,248,0.1)',
+                display: 'flex', alignItems: 'center', gap: 6,
+              }}>
+                <span style={{ fontSize: '0.7rem' }}>⏱</span>
+                <span style={{
+                  fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.5px',
+                  color: scheduled.isPast ? '#facc15' : 'var(--accent)',
+                  fontVariantNumeric: 'tabular-nums',
+                }}>
+                  {scheduled.isPast ? 'Starting soon' : `Starts in ${scheduled.countdown}`}
+                </span>
               </div>
             </div>
           )}
