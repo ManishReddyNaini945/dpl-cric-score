@@ -83,6 +83,7 @@ export default function Home() {
   const [tab, setTab] = useState('live');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [squadMatch, setSquadMatch] = useState(null);
+  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
   const navigate = useNavigate();
   const { isAdmin, signOut } = useAuth();
 
@@ -135,10 +136,15 @@ export default function Home() {
     return key === 'team1' ? match.meta.team1 : match.meta.team2;
   }
 
-  async function handleDelete(e, matchId) {
+  function handleDelete(e, match) {
     e.preventDefault(); e.stopPropagation();
-    if (!window.confirm('Delete this match?')) return;
-    await deleteDoc(doc(db, 'matches', matchId));
+    setDeleteTarget({ id: match.id, name: `${match.meta?.team1} vs ${match.meta?.team2}` });
+  }
+
+  async function confirmDelete() {
+    if (!deleteTarget) return;
+    await deleteDoc(doc(db, 'matches', deleteTarget.id));
+    setDeleteTarget(null);
   }
 
   async function startUpcoming(e, match) {
@@ -326,7 +332,7 @@ export default function Home() {
 
             {isAdmin && (
               <button
-                onClick={e => { e.preventDefault(); e.stopPropagation(); handleDelete(e, match.id); }}
+                onClick={e => handleDelete(e, match)}
                 style={{
                   marginLeft: 'auto',
                   background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
@@ -457,6 +463,33 @@ export default function Home() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={async () => { setShowLogoutConfirm(false); await signOut(); }}>Yes, Sign Out</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteTarget && (
+        <div className="modal-overlay" onClick={() => setDeleteTarget(null)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{
+                width: 56, height: 56, borderRadius: '50%',
+                background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                margin: '0 auto 12px', fontSize: '1.6rem',
+              }}>
+                🗑️
+              </div>
+              <div style={{ fontSize: '1.1rem', fontWeight: 700, marginBottom: 6 }}>Delete Match?</div>
+              <div className="text-muted" style={{ fontSize: '0.85rem' }}>
+                <strong style={{ color: 'var(--white)' }}>{deleteTarget.name}</strong>
+                <br />This will permanently delete the match and all scores.
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setDeleteTarget(null)}>Cancel</button>
+              <button className="btn btn-danger" style={{ flex: 1 }} onClick={confirmDelete}>Yes, Delete</button>
             </div>
           </div>
         </div>
