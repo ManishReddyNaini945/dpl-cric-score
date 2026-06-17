@@ -56,8 +56,9 @@ export default function NewMatch() {
   const [captain2, setCaptain2] = useState('');
   const [vc2, setVc2] = useState('');
 
-  // Step 0 — scheduled time (optional)
+  // Step 0 — scheduled time + venue (optional)
   const [scheduledAt, setScheduledAt] = useState('');
+  const [venue, setVenue] = useState('');
 
   // Step 3 — toss
   const [tossState, setTossState] = useState('idle');
@@ -183,6 +184,7 @@ export default function NewMatch() {
     return {
       team1: team1Name.trim() || 'Team 1',
       team2: team2Name.trim() || 'Team 2',
+      venue: venue.trim(),
       players1: p1.map(p => p.name),
       players2: p2.map(p => p.name),
       playerRoles1: Object.fromEntries(p1.map(p => [p.name, p.role])),
@@ -310,6 +312,10 @@ export default function NewMatch() {
               <select value={overs} onChange={e => setOvers(Number(e.target.value))}>
                 {[4, 5, 6, 7, 8, 10, 12].map(o => <option key={o} value={o}>{o} overs</option>)}
               </select>
+            </div>
+            <div className="form-group">
+              <label>📍 Venue <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional)</span></label>
+              <input type="text" placeholder="e.g. DPL Office Ground, Hyderabad" value={venue} onChange={e => setVenue(e.target.value)} />
             </div>
             <div className="form-group">
               <label>📅 Match Date & Time <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional — for upcoming)</span></label>

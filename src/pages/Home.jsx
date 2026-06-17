@@ -165,6 +165,7 @@ export default function Home() {
       team1: m.team1 || '',
       team2: m.team2 || '',
       overs: m.overs || 6,
+      venue: m.venue || '',
       scheduledAt: scheduledVal,
     });
     setEditTarget(match);
@@ -176,6 +177,7 @@ export default function Home() {
       'meta.team1': editFields.team1.trim() || editTarget.meta.team1,
       'meta.team2': editFields.team2.trim() || editTarget.meta.team2,
       'meta.overs': Number(editFields.overs),
+      'meta.venue': editFields.venue.trim(),
       'meta.scheduledAt': editFields.scheduledAt ? new Date(editFields.scheduledAt).getTime() : null,
     };
     await updateDoc(doc(db, 'matches', editTarget.id), updated);
@@ -220,200 +222,194 @@ export default function Home() {
     return { dateStr, timeStr, countdown, isPast: diffMs <= 0 };
   }
 
-  function renderSquadInline(players, roles, cap, vc, teamName, accentColor) {
-    return (
-      <div style={{ flex: 1 }}>
-        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: accentColor, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          {teamName}
-        </div>
-        {(players || []).map(name => (
-          <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
-            <div style={{
-              width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
-              background: accentColor + '22', color: accentColor,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-              fontWeight: 700, fontSize: '0.72rem',
-            }}>
-              {name[0].toUpperCase()}
-            </div>
-            <div style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600 }}>
-              {name}
-              {name === cap && <span style={{ marginLeft: 4, fontSize: '0.6rem', fontWeight: 800, color: '#facc15', background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.3)', borderRadius: 3, padding: '1px 4px' }}>C</span>}
-              {name === vc  && <span style={{ marginLeft: 4, fontSize: '0.6rem', fontWeight: 800, color: '#94a3b8', background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: 3, padding: '1px 4px' }}>VC</span>}
-            </div>
-            <RoleBadge role={roles?.[name] || 'allrounder'} small />
+  function SquadList({ players, roles, cap, vc, color }) {
+    return (players || []).map(name => {
+      const role = roles?.[name] || 'allrounder';
+      const roleIcon = role === 'batsman' ? '🏏' : role === 'bowler' ? '🎳' : '⭐';
+      return (
+        <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+            background: color + '22', color, fontWeight: 800, fontSize: '0.75rem',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            {name[0].toUpperCase()}
           </div>
-        ))}
-      </div>
-    );
+          <div style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600, lineHeight: 1.2 }}>
+            {name}
+            {name === cap && <span style={{ marginLeft: 4, fontSize: '0.6rem', fontWeight: 900, color: '#facc15', background: 'rgba(250,204,21,0.15)', border: '1px solid rgba(250,204,21,0.35)', borderRadius: 3, padding: '1px 4px' }}>C</span>}
+            {name === vc  && <span style={{ marginLeft: 4, fontSize: '0.6rem', fontWeight: 900, color: '#94a3b8', background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.3)', borderRadius: 3, padding: '1px 4px' }}>VC</span>}
+          </div>
+          <span style={{ fontSize: '0.88rem' }}>{roleIcon}</span>
+        </div>
+      );
+    });
   }
 
   function renderMatchCard(match) {
     const summary = getMatchSummary(match);
-    const isLive = match.meta?.status === 'live' || match.meta?.status === 'innings_break';
-    const isUpcoming = match.meta?.status === 'upcoming';
-    const scheduled = isUpcoming ? formatScheduled(match.meta?.scheduledAt) : null;
+    const m = match.meta || {};
+    const isLive = m.status === 'live' || m.status === 'innings_break';
+    const isUpcoming = m.status === 'upcoming';
+    const isCompleted = m.status === 'completed';
+    const scheduled = isUpcoming ? formatScheduled(m.scheduledAt) : null;
+    const matchLink = isUpcoming ? '#' : isCompleted ? `/match/${match.id}/scorecard` : `/match/${match.id}`;
 
     return (
-      <div key={match.id} style={{ position: 'relative', marginBottom: 12 }}>
-        <Link
-          className="match-card"
-          to={isUpcoming ? '#' : match.meta?.status === 'completed' ? `/match/${match.id}/scorecard` : `/match/${match.id}`}
-          onClick={isUpcoming ? e => e.preventDefault() : undefined}
-          style={{ display: 'block', paddingBottom: 12 }}
-        >
-          {/* Header row */}
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-            <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.8px' }}>
-              Box Cricket · {match.meta?.overs} overs
-            </div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-              {isLive && <span className="status-dot live" />}
-              <span style={{
-                fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase',
-                color: isLive ? '#4ade80' : isUpcoming ? 'var(--accent)' : 'var(--text-muted)',
-              }}>
-                {isLive ? 'Live' : isUpcoming ? 'Upcoming' : 'Completed'}
-              </span>
-            </div>
-          </div>
+      <div key={match.id} style={{ marginBottom: 14, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'var(--card-bg)' }}>
 
-          {/* Scheduled time banner for upcoming */}
-          {isUpcoming && scheduled && (
-            <div style={{
-              marginBottom: 10, borderRadius: 10, overflow: 'hidden',
-              border: `1px solid ${scheduled.isPast ? 'rgba(250,204,21,0.3)' : 'rgba(56,189,248,0.2)'}`,
+        {/* ── Top strip: status + match info ── */}
+        <div style={{
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+          padding: '10px 14px',
+          background: isLive ? 'rgba(74,222,128,0.06)' : isUpcoming ? 'rgba(56,189,248,0.06)' : 'rgba(255,255,255,0.03)',
+          borderBottom: '1px solid rgba(255,255,255,0.06)',
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            {isLive && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 6px #4ade80', animation: 'pulse 1.5s infinite' }} />}
+            <span style={{
+              fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px',
+              color: isLive ? '#4ade80' : isUpcoming ? 'var(--accent)' : 'var(--text-muted)',
             }}>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 10,
-                padding: '8px 12px',
-                background: scheduled.isPast ? 'rgba(250,204,21,0.06)' : 'rgba(56,189,248,0.06)',
-              }}>
-                <span style={{ fontSize: '1.1rem' }}>📅</span>
-                <div style={{ flex: 1 }}>
-                  <div style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--white)' }}>
-                    {scheduled.dateStr} · {scheduled.timeStr}
-                  </div>
+              {isLive ? '● Live' : isUpcoming ? 'Upcoming' : 'Completed'}
+            </span>
+            <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>|</span>
+            <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
+              Box Cricket · {m.overs} Overs
+            </span>
+          </div>
+          {isAdmin && (
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button onClick={e => handleEdit(e, match)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, padding: '2px 6px' }}>✏️</button>
+              <button onClick={e => handleDelete(e, match)} style={{ background: 'none', border: 'none', color: 'var(--danger-light)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, padding: '2px 6px' }}>🗑️</button>
+            </div>
+          )}
+        </div>
+
+        {/* ── Venue + time ── */}
+        <div style={{ padding: '8px 14px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          {m.venue && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <span>📍</span><span>{m.venue}</span>
+            </div>
+          )}
+          {isUpcoming && scheduled && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+              <span>🗓</span><span>{scheduled.dateStr} · {scheduled.timeStr}</span>
+            </div>
+          )}
+        </div>
+
+        {/* ── Countdown for upcoming ── */}
+        {isUpcoming && scheduled && (
+          <div style={{
+            margin: '8px 14px',
+            background: scheduled.isPast ? 'rgba(250,204,21,0.08)' : 'rgba(56,189,248,0.08)',
+            border: `1px solid ${scheduled.isPast ? 'rgba(250,204,21,0.25)' : 'rgba(56,189,248,0.2)'}`,
+            borderRadius: 8, padding: '6px 12px',
+            display: 'flex', alignItems: 'center', gap: 8,
+          }}>
+            <span style={{ fontSize: '0.85rem' }}>⏱</span>
+            <span style={{
+              fontSize: '0.92rem', fontWeight: 800,
+              color: scheduled.isPast ? '#facc15' : 'var(--accent)',
+              fontVariantNumeric: 'tabular-nums', letterSpacing: '0.3px',
+            }}>
+              {scheduled.isPast ? 'Starting soon' : `Starts in ${scheduled.countdown}`}
+            </span>
+          </div>
+        )}
+        {isUpcoming && !m.scheduledAt && (
+          <div style={{ margin: '8px 14px', fontSize: '0.75rem', color: 'var(--text-muted)' }}>📅 Time not set</div>
+        )}
+
+        {/* ── Teams & Score ── */}
+        <Link to={matchLink} onClick={isUpcoming ? e => e.preventDefault() : undefined} style={{ display: 'block', padding: '10px 14px', textDecoration: 'none' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 36px 1fr', alignItems: 'center', gap: 4 }}>
+            {/* Team 1 */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg,rgba(56,189,248,0.3),rgba(56,189,248,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', color: 'var(--accent)', flexShrink: 0 }}>
+                  {(m.team1||'T')[0].toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.2 }}>{m.team1}</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{m.players1?.length || 0} players</div>
                 </div>
               </div>
-              <div style={{
-                padding: '6px 12px',
-                background: scheduled.isPast ? 'rgba(250,204,21,0.1)' : 'rgba(56,189,248,0.1)',
-                display: 'flex', alignItems: 'center', gap: 6,
-              }}>
-                <span style={{ fontSize: '0.7rem' }}>⏱</span>
-                <span style={{
-                  fontSize: '0.85rem', fontWeight: 800, letterSpacing: '0.5px',
-                  color: scheduled.isPast ? '#facc15' : 'var(--accent)',
-                  fontVariantNumeric: 'tabular-nums',
-                }}>
-                  {scheduled.isPast ? 'Starting soon' : `Starts in ${scheduled.countdown}`}
-                </span>
-              </div>
+              {summary?.line1 && (
+                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--white)', letterSpacing: '-0.5px' }}>
+                  {summary.line1.split(': ')[1] || summary.line1}
+                </div>
+              )}
             </div>
-          )}
-          {isUpcoming && !scheduled && (
-            <div style={{
-              display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10,
-              fontSize: '0.78rem', color: 'var(--text-muted)',
-            }}>
-              📅 Time not set
-            </div>
-          )}
 
-          {/* Teams */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'center', marginBottom: 10 }}>
-            <div>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{match.meta?.team1}</div>
-              {summary?.line1 && <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--white)', marginTop: 2 }}>{summary.line1.split(': ')[1]}</div>}
-              {!summary && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{(match.meta?.players1?.length || 0)} players</div>}
-            </div>
-            <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.85rem', fontWeight: 600 }}>vs</div>
+            {/* VS */}
+            <div style={{ textAlign: 'center', color: 'var(--text-muted)', fontSize: '0.78rem', fontWeight: 700 }}>VS</div>
+
+            {/* Team 2 */}
             <div style={{ textAlign: 'right' }}>
-              <div style={{ fontWeight: 700, fontSize: '0.95rem' }}>{match.meta?.team2}</div>
-              {summary?.line2 && <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--white)', marginTop: 2 }}>{summary.line2.split(': ')[1]}</div>}
-              {!summary && <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: 2 }}>{(match.meta?.players2?.length || 0)} players</div>}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4, flexDirection: 'row-reverse' }}>
+                <div style={{ width: 36, height: 36, borderRadius: 8, background: 'linear-gradient(135deg,rgba(167,139,250,0.3),rgba(167,139,250,0.1))', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 900, fontSize: '1rem', color: '#a78bfa', flexShrink: 0 }}>
+                  {(m.team2||'T')[0].toUpperCase()}
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.2 }}>{m.team2}</div>
+                  <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{m.players2?.length || 0} players</div>
+                </div>
+              </div>
+              {summary?.line2 && (
+                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: 'var(--white)', letterSpacing: '-0.5px' }}>
+                  {summary.line2.split(': ')[1] || summary.line2}
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Inline squads for upcoming */}
-          {isUpcoming && (
-            <div style={{
-              borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginBottom: 10,
-              display: 'flex', gap: 16,
-            }}>
-              {renderSquadInline(match.meta?.players1, match.meta?.playerRoles1, match.meta?.captain1, match.meta?.vc1, match.meta?.team1, 'var(--accent)')}
-              <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0 }} />
-              {renderSquadInline(match.meta?.players2, match.meta?.playerRoles2, match.meta?.captain2, match.meta?.vc2, match.meta?.team2, '#a78bfa')}
-            </div>
-          )}
-
-          {/* Result / chase */}
+          {/* Result / chase strip */}
           {(summary?.result || summary?.chase) && (
             <div style={{
-              background: summary?.result ? 'rgba(56,189,248,0.08)' : 'rgba(250,204,21,0.06)',
+              marginTop: 10, borderRadius: 6, padding: '6px 10px', textAlign: 'center',
+              fontSize: '0.8rem', fontWeight: 700,
+              background: summary?.result ? 'rgba(56,189,248,0.08)' : 'rgba(250,204,21,0.07)',
+              color: summary?.result ? 'var(--accent)' : '#facc15',
               border: `1px solid ${summary?.result ? 'rgba(56,189,248,0.2)' : 'rgba(250,204,21,0.2)'}`,
-              borderRadius: 8, padding: '5px 10px', fontSize: '0.8rem', fontWeight: 600,
-              color: summary?.result ? 'var(--accent)' : '#facc15', marginBottom: 8,
             }}>
               {summary.result || summary.chase}
             </div>
           )}
-
-          {/* Action buttons row */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
-            {!isUpcoming && (
-              <button
-                onClick={e => { e.preventDefault(); e.stopPropagation(); setSquadMatch(match); }}
-                style={{
-                  background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-                  borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 600,
-                  color: 'var(--text-muted)', cursor: 'pointer',
-                }}
-              >
-                👥 Squads
-              </button>
-            )}
-
-            {isUpcoming && isAdmin && (
-              <button
-                onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/match/${match.id}`); }}
-                style={{
-                  background: 'rgba(56,189,248,0.12)', border: '1px solid rgba(56,189,248,0.3)',
-                  borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
-                  color: 'var(--accent)', cursor: 'pointer',
-                }}
-              >
-                🏏 Start Match
-              </button>
-            )}
-
-            {isAdmin && (
-              <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
-                <button
-                  onClick={e => handleEdit(e, match)}
-                  style={{
-                    background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)',
-                    borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
-                    color: 'var(--accent)', cursor: 'pointer',
-                  }}
-                >
-                  ✏️ Edit
-                </button>
-                <button
-                  onClick={e => handleDelete(e, match)}
-                  style={{
-                    background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-                    borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
-                    color: 'var(--danger-light)', cursor: 'pointer',
-                  }}
-                >
-                  🗑️ Delete
-                </button>
-              </div>
-            )}
-          </div>
         </Link>
+
+        {/* ── Playing XI section ── */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0 14px 12px' }}>
+          <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', padding: '10px 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span>👥</span> Playing XI
+          </div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '0 12px' }}>
+            <div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.team1}</div>
+              <SquadList players={m.players1} roles={m.playerRoles1} cap={m.captain1} vc={m.vc1} color="var(--accent)" />
+            </div>
+            <div style={{ background: 'rgba(255,255,255,0.07)' }} />
+            <div>
+              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a78bfa', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.team2}</div>
+              <SquadList players={m.players2} roles={m.playerRoles2} cap={m.captain2} vc={m.vc2} color="#a78bfa" />
+            </div>
+          </div>
+        </div>
+
+        {/* ── Bottom action bar ── */}
+        {(isUpcoming && isAdmin) && (
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 14px' }}>
+            <button
+              onClick={e => { e.preventDefault(); navigate(`/match/${match.id}`); }}
+              className="btn btn-primary btn-full"
+              style={{ padding: '9px', fontSize: '0.85rem' }}
+            >
+              🏏 Start Match
+            </button>
+          </div>
+        )}
       </div>
     );
   }
@@ -570,6 +566,10 @@ export default function Home() {
               >
                 {[4, 5, 6, 7, 8, 10, 12].map(o => <option key={o} value={o}>{o} overs</option>)}
               </select>
+            </div>
+            <div className="form-group">
+              <label>📍 Venue</label>
+              <input type="text" placeholder="e.g. DPL Office Ground" value={editFields.venue || ''} onChange={e => setEditFields(f => ({ ...f, venue: e.target.value }))} />
             </div>
             <div className="form-group">
               <label>📅 Match Date & Time <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(upcoming)</span></label>
