@@ -235,7 +235,8 @@ export default function Home() {
   function SquadList({ players, roles, cap, vc, color }) {
     return (players || []).map(name => {
       const role = roles?.[name] || 'allrounder';
-      const roleIcon = role === 'batsman' ? '🏏' : role === 'bowler' ? '🔴' : '🏏🔴';
+      const roleShort = role === 'batsman' ? 'BAT' : role === 'bowler' ? 'BOWL' : 'BAT+BOWL';
+      const roleColor = role === 'batsman' ? '#3498db' : role === 'bowler' ? '#2ecc71' : '#f0a500';
       return (
         <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
           <div style={{
@@ -250,7 +251,7 @@ export default function Home() {
             {name === cap && <span style={{ marginLeft: 4, fontSize: '0.6rem', fontWeight: 900, color: '#facc15', background: 'rgba(250,204,21,0.15)', border: '1px solid rgba(250,204,21,0.35)', borderRadius: 3, padding: '1px 4px' }}>C</span>}
             {name === vc  && <span style={{ marginLeft: 4, fontSize: '0.6rem', fontWeight: 900, color: '#94a3b8', background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.3)', borderRadius: 3, padding: '1px 4px' }}>VC</span>}
           </div>
-          <span style={{ fontSize: '0.88rem' }}>{roleIcon}</span>
+          <span style={{ fontSize: '0.62rem', fontWeight: 800, color: roleColor, background: roleColor + '22', border: `1px solid ${roleColor}55`, borderRadius: 10, padding: '1px 5px', whiteSpace: 'nowrap' }}>{roleShort}</span>
         </div>
       );
     });

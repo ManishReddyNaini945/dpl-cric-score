@@ -7,9 +7,9 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
 const ROLES = [
-  { id: 'batsman',    label: 'Batsman',     icon: '🏏',    color: '#3498db' },
-  { id: 'bowler',     label: 'Bowler',      icon: '🔴',    color: '#2ecc71' },
-  { id: 'allrounder', label: 'All-rounder', icon: '🏏🔴', color: '#f0a500' },
+  { id: 'batsman',    label: 'Batsman',     short: 'BAT',      color: '#3498db' },
+  { id: 'bowler',     label: 'Bowler',      short: 'BOWL',     color: '#2ecc71' },
+  { id: 'allrounder', label: 'All-rounder', short: 'BAT+BOWL', color: '#f0a500' },
 ];
 
 export function RoleBadge({ role, small }) {
@@ -21,11 +21,12 @@ export function RoleBadge({ role, small }) {
       border: `1px solid ${r.color}55`,
       borderRadius: 20,
       padding: small ? '2px 8px' : '3px 10px',
-      fontSize: small ? '0.7rem' : '0.78rem',
-      fontWeight: 700,
+      fontSize: small ? '0.68rem' : '0.75rem',
+      fontWeight: 800,
       whiteSpace: 'nowrap',
+      letterSpacing: '0.3px',
     }}>
-      {r.icon} {r.label}
+      {small ? r.short : r.label}
     </span>
   );
 }
@@ -125,7 +126,7 @@ export default function Players() {
                     textAlign: 'center',
                   }}
                 >
-                  {r.icon}<br />{r.label}
+                  {r.short}<br /><span style={{ fontWeight: 400, fontSize: '0.72rem' }}>{r.label}</span>
                 </button>
               ))}
             </div>
@@ -150,7 +151,7 @@ export default function Players() {
           ROLES.map(r => grouped[r.id].length > 0 && (
             <div key={r.id} style={{ marginBottom: 16 }}>
               <div className="section-title" style={{ color: r.color, marginBottom: 8 }}>
-                {r.icon} {r.label}s ({grouped[r.id].length})
+                {r.label}s ({grouped[r.id].length})
               </div>
               {grouped[r.id].map(p => (
                 <div key={p.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 8 }}>
