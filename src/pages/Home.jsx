@@ -413,6 +413,21 @@ export default function Home() {
               {summary.result || summary.chase}
             </div>
           )}
+
+          {/* Player of the Match */}
+          {isCompleted && m.potm && (
+            <div style={{
+              marginTop: 8, borderRadius: 8, padding: '8px 12px',
+              background: 'rgba(250,204,21,0.07)', border: '1px solid rgba(250,204,21,0.2)',
+              display: 'flex', alignItems: 'center', gap: 10,
+            }}>
+              <span style={{ fontSize: '1rem' }}>🏆</span>
+              <div>
+                <div style={{ fontSize: '0.65rem', fontWeight: 700, color: '#facc15', textTransform: 'uppercase', letterSpacing: '0.6px' }}>Player of the Match</div>
+                <div style={{ fontWeight: 800, fontSize: '0.9rem', color: '#facc15' }}>{m.potm}</div>
+              </div>
+            </div>
+          )}
         </Link>
 
         {/* ── Playing XI section ── */}

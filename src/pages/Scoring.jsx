@@ -183,6 +183,7 @@ export default function Scoring() {
   const [showBowlerPick, setShowBowlerPick] = useState(false);
   const [pendingWicketDelivery, setPendingWicketDelivery] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [showPOTM, setShowPOTM] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'matches', id), snap => {
@@ -315,6 +316,7 @@ export default function Scoring() {
         'meta.status': 'completed',
         'meta.result': result,
       });
+      if (isAdmin) setShowPOTM(true);
     }
   }
 
@@ -375,7 +377,7 @@ export default function Scoring() {
     const inn2Complete = isInningsComplete(inn2, meta.overs);
     const isCompleted = meta.status === 'completed';
 
-    if (isCompleted) {
+    if (isCompleted && !showPOTM) {
       return navigate(`/match/${id}/scorecard`);
     }
 
@@ -657,6 +659,85 @@ export default function Scoring() {
           onConfirm={handleBowlerPicked}
         />
       )}
+
+      {/* Player of the Match modal */}
+      {showPOTM && (
+        <POTMModal
+          meta={meta}
+          matchId={id}
+          onDone={() => { setShowPOTM(false); navigate(`/match/${id}/scorecard`); }}
+        />
+      )}
     </>
+  );
+}
+
+function POTMModal({ meta, matchId, onDone }) {
+  const allPlayers = [...(meta.players1 || []), ...(meta.players2 || [])];
+  const [selected, setSelected] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  async function save() {
+    if (!selected || saving) return;
+    setSaving(true);
+    await updateDoc(doc(db, 'matches', matchId), { 'meta.potm': selected });
+    onDone();
+  }
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-sheet" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 20 }}>
+          <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🏆</div>
+          <div className="modal-title" style={{ margin: 0 }}>Player of the Match</div>
+          <div className="text-muted" style={{ fontSize: '0.82rem', marginTop: 4 }}>Select the standout performer</div>
+        </div>
+
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>{meta.team1}</div>
+          {(meta.players1 || []).map(name => (
+            <PlayerRow key={name} name={name} selected={selected === name} onSelect={() => setSelected(name)} />
+          ))}
+        </div>
+
+        <div style={{ marginBottom: 20 }}>
+          <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>{meta.team2}</div>
+          {(meta.players2 || []).map(name => (
+            <PlayerRow key={name} name={name} selected={selected === name} onSelect={() => setSelected(name)} />
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onDone}>Skip</button>
+          <button className="btn btn-primary" style={{ flex: 2 }} disabled={!selected || saving} onClick={save}>
+            {saving ? 'Saving…' : '🏆 Confirm'}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PlayerRow({ name, selected, onSelect }) {
+  return (
+    <div onClick={onSelect} style={{
+      display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
+      borderRadius: 10, marginBottom: 6, cursor: 'pointer',
+      border: `2px solid ${selected ? '#facc15' : 'rgba(255,255,255,0.07)'}`,
+      background: selected ? 'rgba(250,204,21,0.08)' : 'var(--card-bg)',
+      transition: 'all 0.15s',
+    }}>
+      <div style={{
+        width: 34, height: 34, borderRadius: '50%', flexShrink: 0,
+        background: selected ? '#facc15' : 'var(--surface)',
+        color: selected ? '#0c1a28' : 'var(--white)',
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        fontWeight: 800, fontSize: '0.9rem',
+      }}>
+        {selected ? '★' : name[0].toUpperCase()}
+      </div>
+      <span style={{ fontWeight: 600, flex: 1 }}>{name}</span>
+      {selected && <span style={{ color: '#facc15', fontWeight: 800, fontSize: '0.9rem' }}>🏆</span>}
+    </div>
   );
 }

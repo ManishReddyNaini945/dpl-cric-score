@@ -185,6 +185,31 @@ export default function Scorecard() {
               <div className="result-text">{meta.result}</div>
             </div>
           )}
+          {isCompleted && meta.potm && (
+            <div style={{
+              marginTop: 14, padding: '12px 16px', borderRadius: 12,
+              background: 'linear-gradient(135deg, rgba(250,204,21,0.12), rgba(250,204,21,0.04))',
+              border: '1px solid rgba(250,204,21,0.3)',
+              display: 'flex', alignItems: 'center', gap: 12,
+            }}>
+              <div style={{
+                width: 42, height: 42, borderRadius: '50%', flexShrink: 0,
+                background: 'rgba(250,204,21,0.2)', border: '2px solid #facc15',
+                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                fontWeight: 900, fontSize: '1.1rem', color: '#facc15',
+              }}>
+                {meta.potm[0].toUpperCase()}
+              </div>
+              <div style={{ textAlign: 'left' }}>
+                <div style={{ fontSize: '0.68rem', color: '#facc15', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.8px' }}>
+                  🏆 Player of the Match
+                </div>
+                <div style={{ fontWeight: 800, fontSize: '1rem', color: '#facc15', marginTop: 2 }}>
+                  {meta.potm}
+                </div>
+              </div>
+            </div>
+          )}
           {!isCompleted && (
             <div style={{ marginTop: 10 }}>
               <span className="status-dot live" style={{ display: 'inline-block', marginRight: 6 }} />
