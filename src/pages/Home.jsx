@@ -83,7 +83,9 @@ export default function Home() {
   const [tab, setTab] = useState('live');
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [squadMatch, setSquadMatch] = useState(null);
-  const [deleteTarget, setDeleteTarget] = useState(null); // { id, name }
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [editTarget, setEditTarget] = useState(null); // full match doc
+  const [editFields, setEditFields] = useState({});
   const navigate = useNavigate();
   const { isAdmin, signOut } = useAuth();
 
@@ -145,6 +147,33 @@ export default function Home() {
     if (!deleteTarget) return;
     await deleteDoc(doc(db, 'matches', deleteTarget.id));
     setDeleteTarget(null);
+  }
+
+  function handleEdit(e, match) {
+    e.preventDefault(); e.stopPropagation();
+    const m = match.meta || {};
+    const scheduledVal = m.scheduledAt
+      ? new Date(m.scheduledAt - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16)
+      : '';
+    setEditFields({
+      team1: m.team1 || '',
+      team2: m.team2 || '',
+      overs: m.overs || 6,
+      scheduledAt: scheduledVal,
+    });
+    setEditTarget(match);
+  }
+
+  async function saveEdit() {
+    if (!editTarget) return;
+    const updated = {
+      'meta.team1': editFields.team1.trim() || editTarget.meta.team1,
+      'meta.team2': editFields.team2.trim() || editTarget.meta.team2,
+      'meta.overs': Number(editFields.overs),
+      'meta.scheduledAt': editFields.scheduledAt ? new Date(editFields.scheduledAt).getTime() : null,
+    };
+    await updateDoc(doc(db, 'matches', editTarget.id), updated);
+    setEditTarget(null);
   }
 
   async function startUpcoming(e, match) {
@@ -331,17 +360,28 @@ export default function Home() {
             )}
 
             {isAdmin && (
-              <button
-                onClick={e => handleDelete(e, match)}
-                style={{
-                  marginLeft: 'auto',
-                  background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
-                  borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
-                  color: 'var(--danger-light)', cursor: 'pointer',
-                }}
-              >
-                🗑️ Delete
-              </button>
+              <div style={{ marginLeft: 'auto', display: 'flex', gap: 6 }}>
+                <button
+                  onClick={e => handleEdit(e, match)}
+                  style={{
+                    background: 'rgba(56,189,248,0.08)', border: '1px solid rgba(56,189,248,0.2)',
+                    borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
+                    color: 'var(--accent)', cursor: 'pointer',
+                  }}
+                >
+                  ✏️ Edit
+                </button>
+                <button
+                  onClick={e => handleDelete(e, match)}
+                  style={{
+                    background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
+                    borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 700,
+                    color: 'var(--danger-light)', cursor: 'pointer',
+                  }}
+                >
+                  🗑️ Delete
+                </button>
+              </div>
             )}
           </div>
         </Link>
@@ -463,6 +503,58 @@ export default function Home() {
             <div style={{ display: 'flex', gap: 10 }}>
               <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setShowLogoutConfirm(false)}>Cancel</button>
               <button className="btn btn-danger" style={{ flex: 1 }} onClick={async () => { setShowLogoutConfirm(false); await signOut(); }}>Yes, Sign Out</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Match Modal */}
+      {editTarget && (
+        <div className="modal-overlay" onClick={() => setEditTarget(null)}>
+          <div className="modal-sheet" onClick={e => e.stopPropagation()}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+              <div className="modal-title" style={{ margin: 0 }}>✏️ Edit Match</div>
+              <button onClick={() => setEditTarget(null)} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.3rem', cursor: 'pointer' }}>✕</button>
+            </div>
+
+            <div className="form-group">
+              <label>Team 1 Name</label>
+              <input
+                type="text"
+                value={editFields.team1}
+                onChange={e => setEditFields(f => ({ ...f, team1: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>Team 2 Name</label>
+              <input
+                type="text"
+                value={editFields.team2}
+                onChange={e => setEditFields(f => ({ ...f, team2: e.target.value }))}
+              />
+            </div>
+            <div className="form-group">
+              <label>Overs per Innings</label>
+              <select
+                value={editFields.overs}
+                onChange={e => setEditFields(f => ({ ...f, overs: e.target.value }))}
+              >
+                {[4, 5, 6, 7, 8, 10, 12].map(o => <option key={o} value={o}>{o} overs</option>)}
+              </select>
+            </div>
+            <div className="form-group">
+              <label>📅 Match Date & Time <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(upcoming)</span></label>
+              <input
+                type="datetime-local"
+                value={editFields.scheduledAt}
+                onChange={e => setEditFields(f => ({ ...f, scheduledAt: e.target.value }))}
+                style={{ colorScheme: 'dark' }}
+              />
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={() => setEditTarget(null)}>Cancel</button>
+              <button className="btn btn-primary" style={{ flex: 2 }} onClick={saveEdit}>Save Changes</button>
             </div>
           </div>
         </div>
