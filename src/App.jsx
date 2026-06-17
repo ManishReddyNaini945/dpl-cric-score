@@ -6,6 +6,7 @@ import Scoring from './pages/Scoring';
 import Scorecard from './pages/Scorecard';
 import Players from './pages/Players';
 import Login from './pages/Login';
+import EditSquad from './pages/EditSquad';
 
 function LoadingScreen() {
   return (
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/players" element={<Players />} />
         <Route path="/match/:id" element={<Scoring />} />
         <Route path="/match/:id/scorecard" element={<Scorecard />} />
+        <Route path="/match/:id/squad" element={<EditSquad />} />
       </Routes>
     </BrowserRouter>
   );

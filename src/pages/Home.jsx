@@ -293,6 +293,9 @@ export default function Home() {
           </div>
           {isAdmin && (
             <div style={{ display: 'flex', gap: 4 }}>
+              {isUpcoming && (
+                <button onClick={e => { e.preventDefault(); e.stopPropagation(); navigate(`/match/${match.id}/squad`); }} style={{ background: 'rgba(56,189,248,0.1)', border: '1px solid rgba(56,189,248,0.25)', borderRadius: 6, color: 'var(--accent)', cursor: 'pointer', fontSize: '0.7rem', fontWeight: 700, padding: '2px 7px' }}>👥 Squad</button>
+              )}
               <button onClick={e => handleEdit(e, match)} style={{ background: 'none', border: 'none', color: 'var(--accent)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, padding: '2px 6px' }}>✏️</button>
               <button onClick={e => handleDelete(e, match)} style={{ background: 'none', border: 'none', color: 'var(--danger-light)', cursor: 'pointer', fontSize: '0.78rem', fontWeight: 700, padding: '2px 6px' }}>🗑️</button>
             </div>
