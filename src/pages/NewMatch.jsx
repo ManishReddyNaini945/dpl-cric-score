@@ -86,13 +86,28 @@ export default function NewMatch() {
     setStep(2);
   }
 
-  // Swap a player between teams
+  function isCaptainOrVC(playerId) {
+    return [captain1, vc1, captain2, vc2].includes(playerId);
+  }
+
+  const [swapError, setSwapError] = useState('');
+
+  // Swap a player between teams — captains/VCs are locked
   function handlePlayerTap(player, fromTeam) {
+    setSwapError('');
+
+    // Block selecting a captain/VC as swap target
+    if (isCaptainOrVC(player.id)) {
+      setSwapError(`${player.name} is Captain/VC — remove the role first to swap.`);
+      setSwapFrom(null);
+      return;
+    }
+
     if (!swapFrom) {
       setSwapFrom({ player, fromTeam });
       return;
     }
-    // Swap the two selected players
+
     const a = swapFrom;
     if (a.player.id === player.id) { setSwapFrom(null); return; }
 
@@ -160,6 +175,45 @@ export default function NewMatch() {
 
   function reflip() { setTossState('idle'); setTossWinner(''); setElected(''); }
 
+  function buildMatchMeta(status) {
+    const p1 = team1, p2 = team2;
+    return {
+      team1: team1Name.trim() || 'Team 1',
+      team2: team2Name.trim() || 'Team 2',
+      players1: p1.map(p => p.name),
+      players2: p2.map(p => p.name),
+      playerRoles1: Object.fromEntries(p1.map(p => [p.name, p.role])),
+      playerRoles2: Object.fromEntries(p2.map(p => [p.name, p.role])),
+      captain1: p1.find(p => p.id === captain1)?.name || '',
+      vc1: p1.find(p => p.id === vc1)?.name || '',
+      captain2: p2.find(p => p.id === captain2)?.name || '',
+      vc2: p2.find(p => p.id === vc2)?.name || '',
+      overs,
+      playerCount: Math.max(p1.length, p2.length),
+      tossWinner,
+      elected,
+      status,
+      result: null,
+    };
+  }
+
+  async function saveUpcoming() {
+    if (!elected || saving) return;
+    setSaving(true);
+    try {
+      await addDoc(collection(db, 'matches'), {
+        meta: buildMatchMeta('upcoming'),
+        innings: [],
+        currentInnings: 0,
+        createdAt: serverTimestamp(),
+      });
+      navigate('/');
+    } catch (err) {
+      alert('Error saving match.'); console.error(err);
+    }
+    setSaving(false);
+  }
+
   async function startMatch() {
     if (!elected || saving) return;
     setSaving(true);
@@ -181,6 +235,7 @@ export default function NewMatch() {
     try {
       const ref = await addDoc(collection(db, 'matches'), {
         meta: {
+          upcoming: false,
           team1: team1Name.trim() || 'Team 1',
           team2: team2Name.trim() || 'Team 2',
           players1: p1.map(p => p.name),
@@ -356,7 +411,18 @@ export default function NewMatch() {
               </div>
             </div>
 
-            {swapFrom && (
+            {swapError && (
+              <div style={{
+                background: 'rgba(239,68,68,0.1)', border: '1px solid var(--danger)',
+                borderRadius: 10, padding: '8px 14px', marginBottom: 10,
+                fontSize: '0.82rem', color: 'var(--danger-light)',
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <span>🔒 {swapError}</span>
+                <button onClick={() => setSwapError('')} style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', fontSize: '1rem' }}>✕</button>
+              </div>
+            )}
+            {swapFrom && !swapError && (
               <div style={{
                 background: 'rgba(56,189,248,0.12)', border: '1px solid var(--accent)',
                 borderRadius: 10, padding: '8px 14px', marginBottom: 12,
@@ -581,9 +647,12 @@ export default function NewMatch() {
                     </span>{' '}elected to <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{elected}</span> first
                   </div>
                 )}
-                <div style={{ display: 'flex', gap: 10 }}>
-                  <button className="btn btn-ghost" style={{ flex: 1 }} onClick={reflip}>Reflip</button>
-                  <button className="btn btn-primary" style={{ flex: 2 }} disabled={!elected || saving} onClick={startMatch}>
+                <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <button className="btn btn-ghost" style={{ flex: 1, minWidth: 80 }} onClick={reflip}>Reflip</button>
+                  <button className="btn btn-secondary" style={{ flex: 1, minWidth: 120 }} disabled={!elected || saving} onClick={() => saveUpcoming()}>
+                    📅 Save Upcoming
+                  </button>
+                  <button className="btn btn-primary" style={{ flex: 2, minWidth: 120 }} disabled={!elected || saving} onClick={startMatch}>
                     {saving ? 'Starting…' : '🏏 Start Match!'}
                   </button>
                 </div>
