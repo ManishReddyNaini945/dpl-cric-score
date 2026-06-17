@@ -349,7 +349,7 @@ export default function Home() {
                   {(m.team1||'T')[0].toUpperCase()}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.2 }}>{m.team1}</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.2, color: 'var(--white)' }}>{m.team1}</div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{m.players1?.length || 0} players</div>
                 </div>
               </div>
@@ -370,7 +370,7 @@ export default function Home() {
                   {(m.team2||'T')[0].toUpperCase()}
                 </div>
                 <div>
-                  <div style={{ fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.2 }}>{m.team2}</div>
+                  <div style={{ fontWeight: 700, fontSize: '0.88rem', lineHeight: 1.2, color: 'var(--white)' }}>{m.team2}</div>
                   <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>{m.players2?.length || 0} players</div>
                 </div>
               </div>
