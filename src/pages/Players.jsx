@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy,
+  collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, updateDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -32,7 +32,7 @@ export function RoleBadge({ role, small }) {
   );
 }
 
-function RoleAccordion({ grouped, isAdmin, removePlayer }) {
+function RoleAccordion({ grouped, isAdmin, removePlayer, editPlayer }) {
   const [open, setOpen] = useState(() => ROLES.reduce((acc, r) => ({ ...acc, [r.id]: true }), {}));
 
   function toggle(id) {
@@ -82,9 +82,10 @@ function RoleAccordion({ grouped, isAdmin, removePlayer }) {
                 <div style={{ fontWeight: 600 }}>{p.name}</div>
               </div>
               {isAdmin && (
-                <button onClick={() => removePlayer(p.id)} style={{ background: 'none', border: 'none', color: 'var(--danger-light)', fontSize: '1rem', cursor: 'pointer', padding: 4 }}>
-                  🗑️
-                </button>
+                <div style={{ display: 'flex', gap: 2 }}>
+                  <button onClick={() => editPlayer(p)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: '1rem', cursor: 'pointer', padding: '4px 6px' }}>✏️</button>
+                  <button onClick={() => removePlayer(p.id)} style={{ background: 'none', border: 'none', color: 'var(--danger-light)', fontSize: '1rem', cursor: 'pointer', padding: '4px 6px' }}>🗑️</button>
+                </div>
               )}
             </div>
           ))}
@@ -102,6 +103,10 @@ export default function Players() {
   const [name, setName] = useState('');
   const [role, setRole] = useState('batsman');
   const [saving, setSaving] = useState(false);
+  const [editTarget, setEditTarget] = useState(null); // { id, name, role }
+  const [editName, setEditName] = useState('');
+  const [editRole, setEditRole] = useState('batsman');
+  const [editSaving, setEditSaving] = useState(false);
 
   useEffect(() => {
     const q = query(collection(db, 'players'), orderBy('createdAt', 'asc'));
@@ -130,6 +135,20 @@ export default function Players() {
   async function removePlayer(id) {
     if (!window.confirm('Remove this player?')) return;
     await deleteDoc(doc(db, 'players', id));
+  }
+
+  function openEdit(p) {
+    setEditTarget(p);
+    setEditName(p.name);
+    setEditRole(p.role);
+  }
+
+  async function saveEdit() {
+    if (!editName.trim() || editSaving) return;
+    setEditSaving(true);
+    await updateDoc(doc(db, 'players', editTarget.id), { name: editName.trim(), role: editRole });
+    setEditSaving(false);
+    setEditTarget(null);
   }
 
   const grouped = {
@@ -211,11 +230,60 @@ export default function Players() {
             <p>No players yet.<br />Add your team members above!</p>
           </div>
         ) : (
-          <RoleAccordion grouped={grouped} isAdmin={isAdmin} removePlayer={removePlayer} />
+          <RoleAccordion grouped={grouped} isAdmin={isAdmin} removePlayer={removePlayer} editPlayer={openEdit} />
         )}
 
         <div style={{ height: 24 }} />
       </div>
+
+      {editTarget && (
+        <div className="modal-overlay">
+          <div className="modal-sheet">
+            <div className="modal-title">Edit Player</div>
+
+            <div className="form-group">
+              <label>Name</label>
+              <input
+                className="input"
+                value={editName}
+                onChange={e => setEditName(e.target.value)}
+                onKeyDown={e => e.key === 'Enter' && saveEdit()}
+                autoFocus
+              />
+            </div>
+
+            <div className="form-group">
+              <label>Role</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                {ROLES.map(r => (
+                  <button
+                    key={r.id}
+                    onClick={() => setEditRole(r.id)}
+                    style={{
+                      flex: 1, padding: '10px 6px', borderRadius: 8, cursor: 'pointer', textAlign: 'center',
+                      border: `2px solid ${editRole === r.id ? r.color : 'rgba(255,255,255,0.1)'}`,
+                      background: editRole === r.id ? r.color + '22' : 'var(--surface)',
+                      color: editRole === r.id ? r.color : 'var(--text-muted)',
+                      fontWeight: 700, fontSize: '0.8rem',
+                    }}
+                  >
+                    <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>{r.short}</span>
+                    <br />
+                    <span style={{ fontWeight: 400, fontSize: '0.7rem' }}>{r.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 10, marginTop: 8 }}>
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setEditTarget(null)}>Cancel</button>
+              <button className="btn btn-primary" style={{ flex: 2 }} disabled={!editName.trim() || editSaving} onClick={saveEdit}>
+                {editSaving ? 'Saving…' : '✓ Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }
