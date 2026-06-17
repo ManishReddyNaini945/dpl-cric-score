@@ -7,52 +7,27 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
 const ROLES = [
-  { id: 'batsman',    label: 'Batsman',     color: '#3498db' },
-  { id: 'bowler',     label: 'Bowler',      color: '#2ecc71' },
-  { id: 'allrounder', label: 'All-rounder', color: '#f0a500' },
+  { id: 'batsman',    label: 'Batsman',     short: 'BAT',  color: '#3498db' },
+  { id: 'bowler',     label: 'Bowler',      short: 'BOWL', color: '#2ecc71' },
+  { id: 'allrounder', label: 'All-rounder', short: 'AR',   color: '#f0a500' },
 ];
-
-function BatIcon({ size = 13 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
-      <rect x="8.5" y="1" width="3" height="13" rx="1.5" transform="rotate(0 10 10)" />
-      <rect x="6" y="13" width="8" height="4" rx="2" />
-    </svg>
-  );
-}
-
-function BallIcon({ size = 11 }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 20 20" fill="currentColor">
-      <circle cx="10" cy="10" r="9" />
-      <path d="M4 10 Q10 6 16 10" stroke="white" strokeWidth="1.2" fill="none" opacity="0.5" />
-      <path d="M4 10 Q10 14 16 10" stroke="white" strokeWidth="1.2" fill="none" opacity="0.5" />
-    </svg>
-  );
-}
-
-function RoleIcon({ role }) {
-  if (role === 'batsman')    return <BatIcon />;
-  if (role === 'bowler')     return <BallIcon />;
-  return <span style={{ display:'inline-flex', alignItems:'center', gap: 2 }}><BatIcon /><BallIcon /></span>;
-}
 
 export function RoleBadge({ role, small }) {
   const r = ROLES.find(x => x.id === role) || ROLES[2];
   return (
     <span style={{
-      display: 'inline-flex', alignItems: 'center', gap: 4,
       background: r.color + '22',
       color: r.color,
       border: `1px solid ${r.color}55`,
-      borderRadius: 20,
-      padding: small ? '2px 8px' : '3px 10px',
-      fontSize: small ? '0.7rem' : '0.78rem',
-      fontWeight: 700,
+      borderRadius: 4,
+      padding: small ? '1px 6px' : '2px 8px',
+      fontSize: small ? '0.68rem' : '0.75rem',
+      fontWeight: 800,
       whiteSpace: 'nowrap',
+      letterSpacing: '0.5px',
+      textTransform: 'uppercase',
     }}>
-      <RoleIcon role={role} />
-      {!small && r.label}
+      {small ? r.short : r.label}
     </span>
   );
 }
@@ -152,7 +127,7 @@ export default function Players() {
                     textAlign: 'center',
                   }}
                 >
-                  <RoleIcon role={r.id} /><br /><span style={{ fontWeight: 600, fontSize: '0.72rem' }}>{r.label}</span>
+                  <span style={{ fontWeight: 800, fontSize: '0.85rem' }}>{r.short}</span><br /><span style={{ fontWeight: 400, fontSize: '0.7rem' }}>{r.label}</span>
                 </button>
               ))}
             </div>
@@ -177,7 +152,7 @@ export default function Players() {
           ROLES.map(r => grouped[r.id].length > 0 && (
             <div key={r.id} style={{ marginBottom: 16 }}>
               <div className="section-title" style={{ color: r.color, marginBottom: 8 }}>
-                {r.label}s ({grouped[r.id].length})
+                {r.short} — {r.label}s ({grouped[r.id].length})
               </div>
               {grouped[r.id].map(p => (
                 <div key={p.id} className="card" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', marginBottom: 8 }}>
