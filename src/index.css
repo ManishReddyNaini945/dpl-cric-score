@@ -1,17 +1,19 @@
 :root {
-  --green-dark: #0f3d1a;
-  --green-mid: #1a5c2a;
-  --green-light: #2d8b47;
-  --gold: #f0a500;
-  --gold-light: #ffd666;
+  --green-dark: #111827;
+  --green-mid: #1f2937;
+  --green-light: #374151;
+  --gold: #38bdf8;
+  --gold-light: #7dd3fc;
   --white: #ffffff;
-  --off-white: #f0f4f0;
-  --text-muted: #a8bfac;
-  --card-bg: #162e1b;
-  --surface: #1e3d24;
-  --danger: #e74c3c;
-  --danger-light: #ff6b6b;
-  --blue: #3498db;
+  --off-white: #f1f5f9;
+  --text-muted: #9ca3af;
+  --card-bg: #1f2937;
+  --surface: #374151;
+  --danger: #ef4444;
+  --danger-light: #f87171;
+  --blue: #38bdf8;
+  --accent: #38bdf8;
+  --accent-dark: #0284c7;
   --radius: 12px;
   --radius-sm: 8px;
 }
@@ -44,28 +46,29 @@ body {
 
 /* ── App Shell ── */
 .app-header {
-  background: var(--green-mid);
+  background: #0f172a;
   padding: 14px 16px;
   display: flex;
   align-items: center;
   gap: 10px;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.06);
   position: sticky;
   top: 0;
   z-index: 100;
+  border-bottom: 1px solid #1e293b;
 }
 
 .app-header h1 {
-  font-size: 1.2rem;
+  font-size: 1.1rem;
   font-weight: 700;
-  color: var(--gold);
-  letter-spacing: 0.5px;
+  color: var(--accent);
+  letter-spacing: 0.3px;
 }
 
 .app-header .back-btn {
   background: none;
   border: none;
-  color: var(--gold);
+  color: var(--accent);
   font-size: 1.5rem;
   cursor: pointer;
   padding: 0 4px;
@@ -106,14 +109,14 @@ body {
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
 .btn-primary {
-  background: var(--gold);
-  color: var(--green-dark);
+  background: var(--accent);
+  color: #0c1a28;
 }
 
 .btn-secondary {
   background: var(--surface);
   color: var(--white);
-  border: 1px solid var(--green-light);
+  border: 1px solid #4b5563;
 }
 
 .btn-danger {
@@ -123,8 +126,8 @@ body {
 
 .btn-ghost {
   background: transparent;
-  color: var(--gold);
-  border: 1px solid var(--gold);
+  color: var(--accent);
+  border: 1px solid var(--accent);
 }
 
 .btn-full { width: 100%; }
@@ -169,7 +172,7 @@ body {
 
 .form-group input:focus,
 .form-group select:focus {
-  border-color: var(--gold);
+  border-color: var(--accent);
 }
 
 .form-group select option { background: var(--green-dark); }
@@ -187,7 +190,7 @@ body {
 .home-hero h2 {
   font-size: 1.6rem;
   font-weight: 700;
-  color: var(--gold);
+  color: var(--accent);
   margin: 8px 0 4px;
 }
 
@@ -296,9 +299,9 @@ body {
 }
 
 .toss-btn.selected {
-  border-color: var(--gold);
-  color: var(--gold);
-  background: rgba(240,165,0,0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(56,189,248,0.1);
 }
 
 .step-indicator {
@@ -316,12 +319,12 @@ body {
   transition: background 0.2s;
 }
 
-.step-dot.active { background: var(--gold); }
-.step-dot.done { background: var(--green-light); }
+.step-dot.active { background: var(--accent); }
+.step-dot.done { background: #4ade80; }
 
 /* ── Scoring Page ── */
 .score-header {
-  background: var(--green-mid);
+  background: #0f172a;
   border-radius: var(--radius);
   padding: 16px;
   text-align: center;
@@ -355,13 +358,13 @@ body {
 
 .crr-display {
   font-size: 0.8rem;
-  color: var(--gold);
+  color: var(--accent);
   margin-top: 2px;
 }
 
 .target-banner {
-  background: rgba(240,165,0,0.15);
-  border: 1px solid var(--gold);
+  background: rgba(56,189,248,0.1);
+  border: 1px solid var(--accent);
   border-radius: var(--radius-sm);
   padding: 8px 12px;
   text-align: center;
@@ -405,8 +408,8 @@ body {
 }
 
 .ball-normal { background: var(--surface); color: var(--white); }
-.ball-four { background: #1a6b3a; color: #4dff8a; border: 1.5px solid #4dff8a; }
-.ball-six { background: #6b1a1a; color: var(--gold); border: 1.5px solid var(--gold); }
+.ball-four { background: #14532d; color: #4ade80; border: 1.5px solid #4ade80; }
+.ball-six { background: #1e3a5f; color: var(--accent); border: 1.5px solid var(--accent); }
 .ball-wicket { background: var(--danger); color: var(--white); }
 .ball-extra { background: #2a2a6b; color: #8a8aff; border: 1.5px solid #8a8aff; }
 .ball-dot { background: transparent; color: var(--text-muted); border: 1.5px solid rgba(255,255,255,0.15); }
@@ -515,8 +518,8 @@ body {
 .run-btn.r1 { background: var(--surface); color: var(--white); }
 .run-btn.r2 { background: var(--surface); color: var(--white); }
 .run-btn.r3 { background: var(--surface); color: var(--white); }
-.run-btn.r4 { background: #1a6b3a; color: #4dff8a; }
-.run-btn.r6 { background: #3d1010; color: var(--gold); border: 2px solid var(--gold); }
+.run-btn.r4 { background: #14532d; color: #4ade80; }
+.run-btn.r6 { background: #1e3a5f; color: var(--accent); border: 2px solid var(--accent); }
 
 .extra-buttons {
   display: grid;
@@ -584,8 +587,8 @@ body {
 }
 
 .mini-run-btn:active { transform: scale(0.9); }
-.mini-run-btn.r4 { border-color: #4dff8a; color: #4dff8a; }
-.mini-run-btn.r6 { border-color: var(--gold); color: var(--gold); }
+.mini-run-btn.r4 { border-color: #4ade80; color: #4ade80; }
+.mini-run-btn.r6 { border-color: var(--accent); color: var(--accent); }
 
 /* ── Modals ── */
 .modal-overlay {
@@ -652,9 +655,9 @@ body {
 }
 
 .option-btn.selected {
-  border-color: var(--gold);
-  background: rgba(240,165,0,0.1);
-  color: var(--gold);
+  border-color: var(--accent);
+  background: rgba(56,189,248,0.1);
+  color: var(--accent);
 }
 
 .option-btn:active { transform: scale(0.98); }
@@ -684,7 +687,7 @@ body {
 .scorecard-team-header .score-big {
   font-size: 1.4rem;
   font-weight: 800;
-  color: var(--gold);
+  color: var(--accent);
 }
 
 .scorecard-table {
@@ -732,7 +735,7 @@ body {
 }
 
 .result-banner {
-  background: linear-gradient(135deg, var(--gold) 0%, #e67e00 100%);
+  background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 100%);
   border-radius: var(--radius);
   padding: 16px;
   text-align: center;
@@ -742,12 +745,12 @@ body {
 .result-banner .result-text {
   font-size: 1.2rem;
   font-weight: 800;
-  color: var(--green-dark);
+  color: #ffffff;
 }
 
 .result-banner .result-sub {
   font-size: 0.82rem;
-  color: rgba(0,0,0,0.6);
+  color: rgba(255,255,255,0.75);
   margin-top: 2px;
 }
 
@@ -787,9 +790,9 @@ body {
 }
 
 .bowler-chip.active {
-  border-color: var(--gold);
-  color: var(--gold);
-  background: rgba(240,165,0,0.1);
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(56,189,248,0.1);
 }
 
 /* ── Utilities ── */

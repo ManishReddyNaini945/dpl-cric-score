@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { doc, onSnapshot, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { useAuth } from '../context/AuthContext';
 import {
   formatOvers, getRunRate, getRequiredRunRate,
   getCurrentOverBalls, ballLabel, ballClass,
@@ -16,6 +17,7 @@ const EXTRA_MODES = { NONE: 'none', WIDE: 'wide', NOBALL: 'noball', BYE: 'bye', 
 export default function Scoring() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [match, setMatch] = useState(null);
   const [loading, setLoading] = useState(true);
   const [extraMode, setExtraMode] = useState(EXTRA_MODES.NONE);
@@ -431,8 +433,8 @@ export default function Scoring() {
         {innings && renderBatsmen(innings)}
         {innings && renderBowler(innings)}
 
-        {/* Bowler pick for start of innings or start of over */}
-        {(needsBowler || showBowlerPick) && (
+        {/* Bowler pick — admin only */}
+        {isAdmin && (needsBowler || showBowlerPick) && (
           <div className="bowler-select">
             <div className="label">Select Bowler</div>
             <BowlerSelectModal
@@ -445,7 +447,17 @@ export default function Scoring() {
           </div>
         )}
 
-        {!needsBowler && !showBowlerPick && innings && !isInningsComplete(innings, meta.overs) && renderActionPad()}
+        {isAdmin && !needsBowler && !showBowlerPick && innings && !isInningsComplete(innings, meta.overs) && renderActionPad()}
+
+        {!isAdmin && innings && !isInningsComplete(innings, meta.overs) && (
+          <div style={{
+            textAlign: 'center', padding: '16px',
+            background: 'rgba(52,152,219,0.06)', borderRadius: 12,
+            border: '1px solid rgba(52,152,219,0.15)', marginBottom: 10,
+          }}>
+            <div style={{ color: '#5dade2', fontSize: '0.82rem' }}>👁️ Live — Watching in real-time</div>
+          </div>
+        )}
 
         {innings && isInningsComplete(innings, meta.overs) && match.currentInnings === 0 && (
           <div className="innings-break-screen">
