@@ -7,9 +7,9 @@ import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
 
 const ROLES = [
-  { id: 'batsman',    label: 'Batsman',     icon: '🏏', color: '#3498db' },
-  { id: 'bowler',     label: 'Bowler',      icon: '🎳', color: '#2ecc71' },
-  { id: 'allrounder', label: 'All-rounder', icon: '⭐', color: '#f0a500' },
+  { id: 'batsman',    label: 'Batsman',     icon: '🏏',    color: '#3498db' },
+  { id: 'bowler',     label: 'Bowler',      icon: '🎳',    color: '#2ecc71' },
+  { id: 'allrounder', label: 'All-rounder', icon: '🏏🎳', color: '#f0a500' },
 ];
 
 export function RoleBadge({ role, small }) {
