@@ -235,7 +235,7 @@ export default function Home() {
   function SquadList({ players, roles, cap, vc, color }) {
     return (players || []).map(name => {
       const role = roles?.[name] || 'allrounder';
-      const roleIcon = role === 'batsman' ? '🏏' : role === 'bowler' ? '🎳' : '🏏🎳';
+      const roleIcon = role === 'batsman' ? '🏏' : role === 'bowler' ? '🔴' : '🏏🔴';
       return (
         <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 7, padding: '5px 0', borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
           <div style={{
