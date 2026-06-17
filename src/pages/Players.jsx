@@ -33,7 +33,7 @@ export function RoleBadge({ role, small }) {
 }
 
 function RoleAccordion({ grouped, isAdmin, removePlayer, editPlayer }) {
-  const [open, setOpen] = useState(() => ROLES.reduce((acc, r) => ({ ...acc, [r.id]: true }), {}));
+  const [open, setOpen] = useState(() => ROLES.reduce((acc, r) => ({ ...acc, [r.id]: false }), {}));
 
   function toggle(id) {
     setOpen(prev => ({ ...prev, [id]: !prev[id] }));
