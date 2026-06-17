@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, updateDoc,
+  collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, updateDoc, getDocs, where,
 } from 'firebase/firestore';
 import { db } from '../firebase';
 import { useAuth } from '../context/AuthContext';
@@ -146,7 +146,48 @@ export default function Players() {
   async function saveEdit() {
     if (!editName.trim() || editSaving) return;
     setEditSaving(true);
-    await updateDoc(doc(db, 'players', editTarget.id), { name: editName.trim(), role: editRole });
+    const oldName = editTarget.name;
+    const newName = editName.trim();
+
+    await updateDoc(doc(db, 'players', editTarget.id), { name: newName, role: editRole });
+
+    // Propagate changes to upcoming matches that include this player
+    const snap = await getDocs(query(collection(db, 'matches'), where('meta.status', '==', 'upcoming')));
+    for (const mDoc of snap.docs) {
+      const meta = mDoc.data().meta || {};
+      const updates = {};
+
+      if (meta.players1?.includes(oldName)) {
+        if (newName !== oldName) {
+          updates['meta.players1'] = meta.players1.map(n => n === oldName ? newName : n);
+          const r1 = { ...(meta.playerRoles1 || {}) };
+          r1[newName] = editRole; delete r1[oldName];
+          updates['meta.playerRoles1'] = r1;
+          if (meta.captain1 === oldName) updates['meta.captain1'] = newName;
+          if (meta.vc1 === oldName) updates['meta.vc1'] = newName;
+        } else {
+          updates[`meta.playerRoles1.${oldName}`] = editRole;
+        }
+      }
+
+      if (meta.players2?.includes(oldName)) {
+        if (newName !== oldName) {
+          updates['meta.players2'] = meta.players2.map(n => n === oldName ? newName : n);
+          const r2 = { ...(meta.playerRoles2 || {}) };
+          r2[newName] = editRole; delete r2[oldName];
+          updates['meta.playerRoles2'] = r2;
+          if (meta.captain2 === oldName) updates['meta.captain2'] = newName;
+          if (meta.vc2 === oldName) updates['meta.vc2'] = newName;
+        } else {
+          updates[`meta.playerRoles2.${oldName}`] = editRole;
+        }
+      }
+
+      if (Object.keys(updates).length > 0) {
+        await updateDoc(doc(db, 'matches', mDoc.id), updates);
+      }
+    }
+
     setEditSaving(false);
     setEditTarget(null);
   }
