@@ -9,24 +9,37 @@ export function AuthProvider({ children }) {
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
+    let didAnonymousSignIn = false;
+
     const unsub = onAuthStateChanged(auth, async (u) => {
       if (u) {
         setUser(u);
+        setReady(true);
+      } else if (!didAnonymousSignIn) {
+        // Only attempt anon sign-in once
+        didAnonymousSignIn = true;
+        try {
+          await signInAnonymously(auth);
+          // onAuthStateChanged will fire again with the anon user → sets ready
+        } catch (err) {
+          // Anonymous auth failed (e.g. disabled in Firebase Console)
+          // Still mark ready so the app renders — Firestore public rules will allow reads
+          console.warn('Anonymous auth failed:', err.code);
+          setReady(true);
+        }
       } else {
-        // Auto sign-in as anonymous user
-        await signInAnonymously(auth).catch(console.error);
+        // Signed out after anon was already attempted
+        setUser(null);
+        setReady(true);
       }
-      setReady(true);
     });
     return unsub;
   }, []);
 
-  // Admin = signed in with email/password (not anonymous)
   const isAdmin = !!user && !user.isAnonymous;
 
   async function signOut() {
     await fbSignOut(auth);
-    // Will re-trigger onAuthStateChanged → signs in anonymously again
   }
 
   return (

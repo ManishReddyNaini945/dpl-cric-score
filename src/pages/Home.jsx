@@ -91,7 +91,10 @@ export default function Home() {
     const unsub = onSnapshot(q, snap => {
       setMatches(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoading(false);
-    }, () => setLoading(false));
+    }, err => {
+      console.error('Firestore read failed:', err.code, err.message);
+      setLoading(false);
+    });
     return unsub;
   }, []);
 
