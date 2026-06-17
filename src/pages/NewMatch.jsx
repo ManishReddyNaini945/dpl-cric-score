@@ -56,6 +56,9 @@ export default function NewMatch() {
   const [captain2, setCaptain2] = useState('');
   const [vc2, setVc2] = useState('');
 
+  // Step 0 — scheduled time (optional)
+  const [scheduledAt, setScheduledAt] = useState('');
+
   // Step 3 — toss
   const [tossState, setTossState] = useState('idle');
   const [tossWinner, setTossWinner] = useState('');
@@ -193,6 +196,7 @@ export default function NewMatch() {
       tossWinner,
       elected,
       status,
+      scheduledAt: scheduledAt ? new Date(scheduledAt).getTime() : null,
       result: null,
     };
   }
@@ -306,6 +310,15 @@ export default function NewMatch() {
               <select value={overs} onChange={e => setOvers(Number(e.target.value))}>
                 {[4, 5, 6, 7, 8, 10, 12].map(o => <option key={o} value={o}>{o} overs</option>)}
               </select>
+            </div>
+            <div className="form-group">
+              <label>📅 Match Date & Time <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>(optional — for upcoming)</span></label>
+              <input
+                type="datetime-local"
+                value={scheduledAt}
+                onChange={e => setScheduledAt(e.target.value)}
+                style={{ colorScheme: 'dark' }}
+              />
             </div>
             <button
               className="btn btn-primary btn-full mt-16"

@@ -152,10 +152,59 @@ export default function Home() {
     { id: 'completed', label: 'Results',   count: completedMatches.length },
   ];
 
+  function formatScheduled(ts) {
+    if (!ts) return null;
+    const d = new Date(ts);
+    const now = new Date();
+    const diffMs = d - now;
+    const diffH = Math.round(diffMs / 3600000);
+    const diffD = Math.floor(diffMs / 86400000);
+
+    const dateStr = d.toLocaleDateString('en-IN', { weekday: 'short', day: 'numeric', month: 'short' });
+    const timeStr = d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', hour12: true });
+
+    let countdown = '';
+    if (diffMs < 0) countdown = 'Starting soon';
+    else if (diffH < 1) countdown = 'Less than 1 hr away';
+    else if (diffH < 24) countdown = `${diffH}h away`;
+    else countdown = `${diffD}d away`;
+
+    return { dateStr, timeStr, countdown };
+  }
+
+  function renderSquadInline(players, roles, cap, vc, teamName, accentColor) {
+    return (
+      <div style={{ flex: 1 }}>
+        <div style={{ fontSize: '0.75rem', fontWeight: 700, color: accentColor, marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          {teamName}
+        </div>
+        {(players || []).map(name => (
+          <div key={name} style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>
+            <div style={{
+              width: 26, height: 26, borderRadius: '50%', flexShrink: 0,
+              background: accentColor + '22', color: accentColor,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontWeight: 700, fontSize: '0.72rem',
+            }}>
+              {name[0].toUpperCase()}
+            </div>
+            <div style={{ flex: 1, fontSize: '0.82rem', fontWeight: 600 }}>
+              {name}
+              {name === cap && <span style={{ marginLeft: 4, fontSize: '0.6rem', fontWeight: 800, color: '#facc15', background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.3)', borderRadius: 3, padding: '1px 4px' }}>C</span>}
+              {name === vc  && <span style={{ marginLeft: 4, fontSize: '0.6rem', fontWeight: 800, color: '#94a3b8', background: 'rgba(148,163,184,0.1)', border: '1px solid rgba(148,163,184,0.25)', borderRadius: 3, padding: '1px 4px' }}>VC</span>}
+            </div>
+            <RoleBadge role={roles?.[name] || 'allrounder'} small />
+          </div>
+        ))}
+      </div>
+    );
+  }
+
   function renderMatchCard(match) {
     const summary = getMatchSummary(match);
     const isLive = match.meta?.status === 'live' || match.meta?.status === 'innings_break';
     const isUpcoming = match.meta?.status === 'upcoming';
+    const scheduled = isUpcoming ? formatScheduled(match.meta?.scheduledAt) : null;
 
     return (
       <div key={match.id} style={{ position: 'relative', marginBottom: 12 }}>
@@ -181,6 +230,33 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Scheduled time banner for upcoming */}
+          {isUpcoming && scheduled && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10,
+              background: 'rgba(56,189,248,0.07)', border: '1px solid rgba(56,189,248,0.18)',
+              borderRadius: 8, padding: '7px 12px',
+            }}>
+              <span style={{ fontSize: '1.1rem' }}>📅</span>
+              <div>
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--white)' }}>
+                  {scheduled.dateStr} · {scheduled.timeStr}
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--accent)', fontWeight: 600 }}>
+                  {scheduled.countdown}
+                </div>
+              </div>
+            </div>
+          )}
+          {isUpcoming && !scheduled && (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 6, marginBottom: 10,
+              fontSize: '0.78rem', color: 'var(--text-muted)',
+            }}>
+              📅 Time not set
+            </div>
+          )}
+
           {/* Teams */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 8, alignItems: 'center', marginBottom: 10 }}>
             <div>
@@ -196,6 +272,18 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Inline squads for upcoming */}
+          {isUpcoming && (
+            <div style={{
+              borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 12, marginBottom: 10,
+              display: 'flex', gap: 16,
+            }}>
+              {renderSquadInline(match.meta?.players1, match.meta?.playerRoles1, match.meta?.captain1, match.meta?.vc1, match.meta?.team1, 'var(--accent)')}
+              <div style={{ width: 1, background: 'rgba(255,255,255,0.07)', flexShrink: 0 }} />
+              {renderSquadInline(match.meta?.players2, match.meta?.playerRoles2, match.meta?.captain2, match.meta?.vc2, match.meta?.team2, '#a78bfa')}
+            </div>
+          )}
+
           {/* Result / chase */}
           {(summary?.result || summary?.chase) && (
             <div style={{
@@ -208,17 +296,19 @@ export default function Home() {
             </div>
           )}
 
-          {/* Squad button */}
-          <button
-            onClick={e => { e.preventDefault(); e.stopPropagation(); setSquadMatch(match); }}
-            style={{
-              background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 600,
-              color: 'var(--text-muted)', cursor: 'pointer', marginRight: 8,
-            }}
-          >
-            👥 Squads
-          </button>
+          {/* Squad button (for live/completed) */}
+          {!isUpcoming && (
+            <button
+              onClick={e => { e.preventDefault(); e.stopPropagation(); setSquadMatch(match); }}
+              style={{
+                background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)',
+                borderRadius: 6, padding: '5px 12px', fontSize: '0.75rem', fontWeight: 600,
+                color: 'var(--text-muted)', cursor: 'pointer', marginRight: 8,
+              }}
+            >
+              👥 Squads
+            </button>
+          )}
 
           {isUpcoming && isAdmin && (
             <button
