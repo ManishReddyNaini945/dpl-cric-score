@@ -72,12 +72,18 @@ export default function Scorecard() {
             </tr>
           </thead>
           <tbody>
-            {batsmen.map(b => (
+            {batsmen.map(b => {
+              const isTeam1 = inn.battingTeam === 'team1';
+              const cap = isTeam1 ? meta.captain1 : meta.captain2;
+              const vc  = isTeam1 ? meta.vc1 : meta.vc2;
+              return (
               <tr key={b.name}>
                 <td>
                   <span style={{ fontWeight: 600 }}>
                     {b.name}
                     {b.name === inn.striker && !inn.complete ? ' *' : ''}
+                    {b.name === cap && <span style={{ marginLeft: 4, fontSize: '0.68rem', fontWeight: 800, color: '#facc15', background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.35)', borderRadius: 4, padding: '1px 4px' }}>C</span>}
+                    {b.name === vc  && <span style={{ marginLeft: 4, fontSize: '0.68rem', fontWeight: 800, color: '#94a3b8', background: 'rgba(148,163,184,0.12)', border: '1px solid rgba(148,163,184,0.3)', borderRadius: 4, padding: '1px 4px' }}>VC</span>}
                   </span>
                   {b.out && <span className="dismissal-text">{b.dismissal}</span>}
                   {!b.out && inn.battingOrder.includes(b.name) && !inn.complete && (
@@ -97,7 +103,7 @@ export default function Scorecard() {
                     : '-'}
                 </td>
               </tr>
-            ))}
+            );})}
             <tr>
               <td colSpan={6}>
                 <div className="extras-row">

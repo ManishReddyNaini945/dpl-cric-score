@@ -47,10 +47,14 @@ export default function NewMatch() {
   const [loadingPlayers, setLoadingPlayers] = useState(true);
   const [selectedIds, setSelectedIds] = useState([]);
 
-  // Step 2 — balanced teams (can swap)
+  // Step 2 — balanced teams (can swap) + captain/VC
   const [team1, setTeam1] = useState([]);
   const [team2, setTeam2] = useState([]);
-  const [swapFrom, setSwapFrom] = useState(null); // { player, fromTeam }
+  const [swapFrom, setSwapFrom] = useState(null);
+  const [captain1, setCaptain1] = useState('');
+  const [vc1, setVc1] = useState('');
+  const [captain2, setCaptain2] = useState('');
+  const [vc2, setVc2] = useState('');
 
   // Step 3 — toss
   const [tossState, setTossState] = useState('idle');
@@ -115,6 +119,35 @@ export default function NewMatch() {
     setTeam1(team1);
     setTeam2(team2);
     setSwapFrom(null);
+    setCaptain1(''); setVc1(''); setCaptain2(''); setVc2('');
+  }
+
+  // Cycle through: none → C → VC → none
+  function cycleRole(playerId, teamNum) {
+    const cap = teamNum === 1 ? captain1 : captain2;
+    const vc  = teamNum === 1 ? vc1 : vc2;
+    const setCap = teamNum === 1 ? setCaptain1 : setCaptain2;
+    const setVc  = teamNum === 1 ? setVc1 : setVc2;
+
+    if (cap === playerId) {
+      setCap('');
+      setVc(playerId); // C → VC
+    } else if (vc === playerId) {
+      setVc('');       // VC → none
+    } else {
+      if (cap) {
+        // someone else is already C, set as VC
+        setVc(playerId);
+      } else {
+        setCap(playerId); // none → C
+      }
+    }
+  }
+
+  function getBadge(playerId, teamNum) {
+    if ((teamNum === 1 ? captain1 : captain2) === playerId) return 'C';
+    if ((teamNum === 1 ? vc1 : vc2) === playerId) return 'VC';
+    return null;
   }
 
   function flipCoin() {
@@ -154,6 +187,10 @@ export default function NewMatch() {
           players2: p2.map(p => p.name),
           playerRoles1: Object.fromEntries(p1.map(p => [p.name, p.role])),
           playerRoles2: Object.fromEntries(p2.map(p => [p.name, p.role])),
+          captain1: p1.find(p => p.id === captain1)?.name || '',
+          vc1: p1.find(p => p.id === vc1)?.name || '',
+          captain2: p2.find(p => p.id === captain2)?.name || '',
+          vc2: p2.find(p => p.id === vc2)?.name || '',
           overs,
           playerCount: Math.max(p1.length, p2.length),
           tossWinner,
@@ -343,18 +380,37 @@ export default function NewMatch() {
                 </div>
                 {team1.map(p => {
                   const isSelected = swapFrom?.player.id === p.id;
+                  const badge = getBadge(p.id, 1);
                   return (
                     <div
                       key={p.id}
-                      onClick={() => handlePlayerTap(p, 1)}
                       style={{
                         padding: '9px 10px', borderRadius: 8, marginBottom: 6,
-                        border: `1.5px solid ${isSelected ? 'var(--accent)' : 'rgba(255,255,255,0.08)'}`,
-                        background: isSelected ? 'rgba(56,189,248,0.15)' : 'var(--card-bg)',
-                        cursor: 'pointer', transition: 'all 0.15s',
+                        border: `1.5px solid ${isSelected ? 'var(--accent)' : badge ? 'rgba(250,204,21,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                        background: isSelected ? 'rgba(56,189,248,0.15)' : badge ? 'rgba(250,204,21,0.06)' : 'var(--card-bg)',
+                        transition: 'all 0.15s',
                       }}
                     >
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 3 }}>{p.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                        <div
+                          style={{ fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', flex: 1 }}
+                          onClick={() => handlePlayerTap(p, 1)}
+                        >
+                          {p.name}
+                        </div>
+                        <button
+                          onClick={() => cycleRole(p.id, 1)}
+                          style={{
+                            minWidth: 28, height: 22, borderRadius: 6, fontSize: '0.68rem', fontWeight: 800,
+                            border: `1.5px solid ${badge === 'C' ? '#facc15' : badge === 'VC' ? '#94a3b8' : 'rgba(255,255,255,0.15)'}`,
+                            background: badge === 'C' ? 'rgba(250,204,21,0.15)' : badge === 'VC' ? 'rgba(148,163,184,0.12)' : 'transparent',
+                            color: badge === 'C' ? '#facc15' : badge === 'VC' ? '#94a3b8' : 'rgba(255,255,255,0.25)',
+                            cursor: 'pointer', padding: '0 4px',
+                          }}
+                        >
+                          {badge || 'C'}
+                        </button>
+                      </div>
                       <RoleBadge role={p.role} small />
                     </div>
                   );
@@ -372,18 +428,37 @@ export default function NewMatch() {
                 </div>
                 {team2.map(p => {
                   const isSelected = swapFrom?.player.id === p.id;
+                  const badge = getBadge(p.id, 2);
                   return (
                     <div
                       key={p.id}
-                      onClick={() => handlePlayerTap(p, 2)}
                       style={{
                         padding: '9px 10px', borderRadius: 8, marginBottom: 6,
-                        border: `1.5px solid ${isSelected ? '#a78bfa' : 'rgba(255,255,255,0.08)'}`,
-                        background: isSelected ? 'rgba(167,139,250,0.15)' : 'var(--card-bg)',
-                        cursor: 'pointer', transition: 'all 0.15s',
+                        border: `1.5px solid ${isSelected ? '#a78bfa' : badge ? 'rgba(250,204,21,0.4)' : 'rgba(255,255,255,0.08)'}`,
+                        background: isSelected ? 'rgba(167,139,250,0.15)' : badge ? 'rgba(250,204,21,0.06)' : 'var(--card-bg)',
+                        transition: 'all 0.15s',
                       }}
                     >
-                      <div style={{ fontWeight: 600, fontSize: '0.85rem', marginBottom: 3 }}>{p.name}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+                        <div
+                          style={{ fontWeight: 600, fontSize: '0.85rem', cursor: 'pointer', flex: 1 }}
+                          onClick={() => handlePlayerTap(p, 2)}
+                        >
+                          {p.name}
+                        </div>
+                        <button
+                          onClick={() => cycleRole(p.id, 2)}
+                          style={{
+                            minWidth: 28, height: 22, borderRadius: 6, fontSize: '0.68rem', fontWeight: 800,
+                            border: `1.5px solid ${badge === 'C' ? '#facc15' : badge === 'VC' ? '#94a3b8' : 'rgba(255,255,255,0.15)'}`,
+                            background: badge === 'C' ? 'rgba(250,204,21,0.15)' : badge === 'VC' ? 'rgba(148,163,184,0.12)' : 'transparent',
+                            color: badge === 'C' ? '#facc15' : badge === 'VC' ? '#94a3b8' : 'rgba(255,255,255,0.25)',
+                            cursor: 'pointer', padding: '0 4px',
+                          }}
+                        >
+                          {badge || 'C'}
+                        </button>
+                      </div>
                       <RoleBadge role={p.role} small />
                     </div>
                   );
