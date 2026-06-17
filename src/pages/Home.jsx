@@ -107,8 +107,18 @@ export default function Home() {
     return unsub;
   }, []);
 
-  const liveMatches = matches.filter(m => m.meta?.status === 'live' || m.meta?.status === 'innings_break');
-  const upcomingMatches = matches.filter(m => m.meta?.status === 'upcoming');
+  // A scheduled upcoming match whose time has passed moves to the Live tab
+  function isTimePassed(m) {
+    return m.meta?.scheduledAt && m.meta.scheduledAt <= now;
+  }
+
+  const liveMatches = matches.filter(m =>
+    m.meta?.status === 'live' || m.meta?.status === 'innings_break' ||
+    (m.meta?.status === 'upcoming' && isTimePassed(m))
+  );
+  const upcomingMatches = matches.filter(m =>
+    m.meta?.status === 'upcoming' && !isTimePassed(m)
+  );
   const completedMatches = matches.filter(m => m.meta?.status === 'completed');
 
   const tabMatches = tab === 'live' ? liveMatches : tab === 'upcoming' ? upcomingMatches : completedMatches;
@@ -252,8 +262,11 @@ export default function Home() {
     const isLive = m.status === 'live' || m.status === 'innings_break';
     const isUpcoming = m.status === 'upcoming';
     const isCompleted = m.status === 'completed';
-    const scheduled = isUpcoming ? formatScheduled(m.scheduledAt) : null;
-    const matchLink = isUpcoming ? '#' : isCompleted ? `/match/${match.id}/scorecard` : `/match/${match.id}`;
+    // Upcoming match whose scheduled time has passed → show in Live tab as toss-pending
+    const isTossPending = isUpcoming && isTimePassed(match);
+    const hasTossResult = isTossPending && !!m.tossWinner;
+    const scheduled = (isUpcoming && !isTossPending) ? formatScheduled(m.scheduledAt) : null;
+    const matchLink = isCompleted ? `/match/${match.id}/scorecard` : `/match/${match.id}`;
 
     return (
       <div key={match.id} style={{ marginBottom: 14, borderRadius: 14, overflow: 'hidden', border: '1px solid rgba(255,255,255,0.08)', background: 'var(--card-bg)' }}>
@@ -266,12 +279,12 @@ export default function Home() {
           borderBottom: '1px solid rgba(255,255,255,0.06)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            {isLive && <span style={{ width: 8, height: 8, borderRadius: '50%', background: '#4ade80', display: 'inline-block', boxShadow: '0 0 6px #4ade80', animation: 'pulse 1.5s infinite' }} />}
+            {(isLive || isTossPending) && <span style={{ width: 8, height: 8, borderRadius: '50%', background: isTossPending ? '#facc15' : '#4ade80', display: 'inline-block', boxShadow: `0 0 6px ${isTossPending ? '#facc15' : '#4ade80'}`, animation: 'pulse 1.5s infinite' }} />}
             <span style={{
               fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px',
-              color: isLive ? '#4ade80' : isUpcoming ? 'var(--accent)' : 'var(--text-muted)',
+              color: isLive ? '#4ade80' : isTossPending ? '#facc15' : isUpcoming ? 'var(--accent)' : 'var(--text-muted)',
             }}>
-              {isLive ? '● Live' : isUpcoming ? 'Upcoming' : 'Completed'}
+              {isLive ? '● Live' : isTossPending ? (hasTossResult ? '🏆 Toss Done' : '🪙 Toss Pending') : isUpcoming ? 'Upcoming' : 'Completed'}
             </span>
             <span style={{ color: 'rgba(255,255,255,0.15)', fontSize: '0.7rem' }}>|</span>
             <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', fontWeight: 600 }}>
@@ -366,6 +379,25 @@ export default function Home() {
             </div>
           </div>
 
+          {/* Toss status strip */}
+          {isTossPending && (
+            <div style={{
+              marginTop: 10, borderRadius: 8, padding: '8px 12px', textAlign: 'center',
+              background: hasTossResult ? 'rgba(250,204,21,0.08)' : 'rgba(255,255,255,0.04)',
+              border: `1px solid ${hasTossResult ? 'rgba(250,204,21,0.25)' : 'rgba(255,255,255,0.08)'}`,
+            }}>
+              {hasTossResult ? (
+                <div style={{ fontSize: '0.85rem', fontWeight: 700, color: '#facc15' }}>
+                  🏆 {m.tossWinner === 'team1' ? m.team1 : m.team2} won the toss! Choosing to bat/bowl…
+                </div>
+              ) : (
+                <div style={{ fontSize: '0.85rem', fontWeight: 600, color: 'var(--text-muted)' }}>
+                  🪙 Toss is pending…
+                </div>
+              )}
+            </div>
+          )}
+
           {/* Result / chase strip */}
           {(summary?.result || summary?.chase) && (
             <div style={{
@@ -399,14 +431,25 @@ export default function Home() {
         </div>
 
         {/* ── Bottom action bar ── */}
-        {(isUpcoming && isAdmin) && (
+        {isUpcoming && isAdmin && !isTossPending && (
           <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 14px' }}>
             <button
-              onClick={e => { e.preventDefault(); navigate(`/match/${match.id}`); }}
+              onClick={() => navigate(`/match/${match.id}`)}
               className="btn btn-primary btn-full"
               style={{ padding: '9px', fontSize: '0.85rem' }}
             >
               🏏 Start Match
+            </button>
+          </div>
+        )}
+        {isTossPending && isAdmin && (
+          <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '10px 14px' }}>
+            <button
+              onClick={() => navigate(`/match/${match.id}`)}
+              className="btn btn-primary btn-full"
+              style={{ padding: '9px', fontSize: '0.85rem', background: 'linear-gradient(135deg,#ca8a04,#facc15)', color: '#000' }}
+            >
+              🪙 Do Toss
             </button>
           </div>
         )}

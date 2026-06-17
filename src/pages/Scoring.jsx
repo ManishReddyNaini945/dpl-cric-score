@@ -16,8 +16,9 @@ const EXTRA_MODES = { NONE: 'none', WIDE: 'wide', NOBALL: 'noball', BYE: 'bye', 
 
 function TossScreen({ match, matchId, navigate, isAdmin }) {
   const meta = match.meta;
-  const [tossState, setTossState] = useState('idle');
-  const [tossWinner, setTossWinner] = useState('');
+  // Restore state if toss was already flipped (admin refreshed page)
+  const [tossState, setTossState] = useState(meta.tossWinner ? 'done' : 'idle');
+  const [tossWinner, setTossWinner] = useState(meta.tossWinner || '');
   const [elected, setElected] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -26,7 +27,12 @@ function TossScreen({ match, matchId, navigate, isAdmin }) {
     setTossState('flipping');
     setElected('');
     const winner = Math.random() < 0.5 ? 'team1' : 'team2';
-    setTimeout(() => { setTossWinner(winner); setTossState('done'); }, 2200);
+    setTimeout(() => {
+      setTossWinner(winner);
+      setTossState('done');
+      // Immediately broadcast toss winner to all users via Firestore
+      updateDoc(doc(db, 'matches', matchId), { 'meta.tossWinner': winner }).catch(console.error);
+    }, 2200);
   }
 
   async function startMatch() {
@@ -57,11 +63,40 @@ function TossScreen({ match, matchId, navigate, isAdmin }) {
 
   if (!isAdmin) {
     return (
-      <div style={{ minHeight: '100dvh', background: 'var(--green-dark)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 12, padding: 24 }}>
-        <div style={{ fontSize: '3rem' }}>📅</div>
-        <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--white)' }}>{meta.team1} vs {meta.team2}</div>
-        <div className="text-muted" style={{ fontSize: '0.88rem' }}>Match hasn't started yet</div>
-        <Link to="/" className="btn btn-ghost mt-16">← Back</Link>
+      <div style={{ minHeight: '100dvh', background: 'var(--green-dark)' }}>
+        <div className="app-header">
+          <button className="back-btn" onClick={() => navigate('/')}>←</button>
+          <h1>{meta.team1} vs {meta.team2}</h1>
+        </div>
+        <div className="page" style={{ textAlign: 'center', paddingTop: 32 }}>
+          {tossWinner ? (
+            <>
+              <div style={{ fontSize: '3rem', marginBottom: 12 }}>🏆</div>
+              <div style={{ fontWeight: 800, fontSize: '1.3rem', color: 'var(--accent)', marginBottom: 6 }}>
+                {tossWinner === 'team1' ? meta.team1 : meta.team2} won the toss!
+              </div>
+              <div className="text-muted" style={{ fontSize: '0.88rem', marginBottom: 24 }}>
+                Choosing to bat or bowl…
+              </div>
+            </>
+          ) : (
+            <>
+              <div style={{ fontSize: '3rem', marginBottom: 12, animation: 'spin 3s linear infinite' }}>🪙</div>
+              <style>{`@keyframes spin{from{transform:rotateY(0)}to{transform:rotateY(360deg)}}`}</style>
+              <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--white)', marginBottom: 6 }}>Toss in progress…</div>
+              <div className="text-muted" style={{ fontSize: '0.88rem', marginBottom: 24 }}>Waiting for the coin toss</div>
+            </>
+          )}
+          <div className="card" style={{ textAlign: 'left' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontWeight: 700, fontSize: '1rem', marginBottom: 4 }}>
+              <span style={{ color: 'var(--accent)' }}>{meta.team1}</span>
+              <span style={{ color: 'var(--text-muted)', fontWeight: 400 }}>vs</span>
+              <span style={{ color: '#a78bfa' }}>{meta.team2}</span>
+            </div>
+            <div className="text-muted" style={{ fontSize: '0.8rem' }}>{meta.overs} Overs · Box Cricket</div>
+          </div>
+          <Link to="/" className="btn btn-ghost mt-16">← Back to Home</Link>
+        </div>
       </div>
     );
   }
