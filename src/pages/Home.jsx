@@ -306,9 +306,15 @@ export default function Home() {
         {/* ── Venue + time ── */}
         <div style={{ padding: '8px 14px 0', display: 'flex', flexDirection: 'column', gap: 4 }}>
           {m.venue && (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-              <span>📍</span><span>{m.venue}</span>
-            </div>
+            <a
+              href={`https://maps.google.com/?q=${encodeURIComponent(m.venue)}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              onClick={e => e.stopPropagation()}
+              style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: 'var(--accent)', textDecoration: 'none' }}
+            >
+              <span>📍</span><span style={{ textDecoration: 'underline' }}>{m.venue}</span>
+            </a>
           )}
           {isUpcoming && scheduled && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: '0.75rem', color: 'var(--text-muted)' }}>
@@ -412,6 +418,20 @@ export default function Home() {
               border: `1px solid ${summary?.result ? 'rgba(56,189,248,0.2)' : 'rgba(250,204,21,0.2)'}`,
             }}>
               {summary.result || summary.chase}
+            </div>
+          )}
+
+          {/* Joker badge */}
+          {m.joker && (
+            <div style={{
+              marginTop: 8, borderRadius: 6, padding: '5px 10px',
+              background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.2)',
+              display: 'flex', alignItems: 'center', gap: 6, fontSize: '0.75rem',
+            }}>
+              <span>⭐</span>
+              <span style={{ color: '#facc15', fontWeight: 700 }}>Joker:</span>
+              <span style={{ color: 'var(--white)', fontWeight: 600 }}>{m.joker}</span>
+              <span style={{ color: 'var(--text-muted)', fontSize: '0.68rem' }}>(plays for both teams)</span>
             </div>
           )}
 

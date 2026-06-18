@@ -6,16 +6,19 @@ import { makeEmptyInnings, addBatsmanToInnings } from '../utils/cricket';
 import { RoleBadge } from './Players';
 
 // Auto-balance players into 2 teams equally by role
-function autoBalance(players) {
+// If jokerId is set, that player is added to both teams
+function autoBalance(players, jokerId) {
+  const joker = jokerId ? players.find(p => p.id === jokerId) : null;
+  const regular = jokerId ? players.filter(p => p.id !== jokerId) : players;
+
   const byRole = {
-    batsman:    players.filter(p => p.role === 'batsman').sort(() => Math.random() - 0.5),
-    allrounder: players.filter(p => p.role === 'allrounder').sort(() => Math.random() - 0.5),
-    bowler:     players.filter(p => p.role === 'bowler').sort(() => Math.random() - 0.5),
+    batsman:    regular.filter(p => p.role === 'batsman').sort(() => Math.random() - 0.5),
+    allrounder: regular.filter(p => p.role === 'allrounder').sort(() => Math.random() - 0.5),
+    bowler:     regular.filter(p => p.role === 'bowler').sort(() => Math.random() - 0.5),
   };
 
   const team1 = [], team2 = [];
 
-  // Snake-draft each role group into the two teams
   Object.values(byRole).forEach(group => {
     group.forEach((player, idx) => {
       if (idx % 2 === 0) team1.push(player);
@@ -23,9 +26,10 @@ function autoBalance(players) {
     });
   });
 
-  // Re-balance if sizes differ by more than 1
   while (team1.length > team2.length + 1) team2.push(team1.pop());
   while (team2.length > team1.length + 1) team1.push(team2.pop());
+
+  if (joker) { team1.push(joker); team2.push(joker); }
 
   return { team1, team2 };
 }
@@ -46,6 +50,9 @@ export default function NewMatch() {
   const [allPlayers, setAllPlayers] = useState([]);
   const [loadingPlayers, setLoadingPlayers] = useState(true);
   const [selectedIds, setSelectedIds] = useState([]);
+
+  // Step 1 — joker (odd player count)
+  const [jokerId, setJokerId] = useState('');
 
   // Step 2 — balanced teams (can swap) + captain/VC
   const [team1, setTeam1] = useState([]);
@@ -82,9 +89,12 @@ export default function NewMatch() {
     setSelectedIds(prev => prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]);
   }
 
+  const isOdd = selectedIds.length % 2 !== 0;
+
   function doAutoBalance() {
+    if (isOdd && !jokerId) return; // must pick joker first
     const selected = allPlayers.filter(p => selectedIds.includes(p.id));
-    const { team1, team2 } = autoBalance(selected);
+    const { team1, team2 } = autoBalance(selected, jokerId);
     setTeam1(team1);
     setTeam2(team2);
     setStep(2);
@@ -134,7 +144,7 @@ export default function NewMatch() {
 
   function reshuffleTeams() {
     const selected = allPlayers.filter(p => selectedIds.includes(p.id));
-    const { team1, team2 } = autoBalance(selected);
+    const { team1, team2 } = autoBalance(selected, jokerId);
     setTeam1(team1);
     setTeam2(team2);
     setSwapFrom(null);
@@ -195,6 +205,7 @@ export default function NewMatch() {
       vc2: p2.find(p => p.id === vc2)?.name || '',
       overs,
       playerCount: Math.max(p1.length, p2.length),
+      joker: jokerId ? (allPlayers.find(p => p.id === jokerId)?.name || '') : '',
       tossWinner,
       elected,
       status,
@@ -406,15 +417,43 @@ export default function NewMatch() {
               </>
             )}
 
+            {/* Joker picker — shown when odd count */}
+            {isOdd && selectedIds.length >= 3 && (
+              <div style={{ margin: '16px 0', background: 'rgba(250,204,21,0.06)', border: '1px solid rgba(250,204,21,0.25)', borderRadius: 12, padding: '12px 14px' }}>
+                <div style={{ fontSize: '0.78rem', fontWeight: 800, color: '#facc15', marginBottom: 10 }}>
+                  ⭐ Odd number of players — select the Joker
+                </div>
+                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 10 }}>
+                  The Joker plays for both teams.
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {allPlayers.filter(p => selectedIds.includes(p.id)).map(p => (
+                    <button
+                      key={p.id}
+                      onClick={() => setJokerId(prev => prev === p.id ? '' : p.id)}
+                      style={{
+                        padding: '6px 12px', borderRadius: 20, cursor: 'pointer', fontSize: '0.8rem', fontWeight: 700,
+                        border: `2px solid ${jokerId === p.id ? '#facc15' : 'rgba(255,255,255,0.12)'}`,
+                        background: jokerId === p.id ? 'rgba(250,204,21,0.15)' : 'var(--surface)',
+                        color: jokerId === p.id ? '#facc15' : 'var(--white)',
+                      }}
+                    >
+                      {jokerId === p.id ? '⭐ ' : ''}{p.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <button
               className="btn btn-primary btn-full mt-16"
-              disabled={selectedIds.length < 4 || selectedIds.length % 2 !== 0}
+              disabled={selectedIds.length < 3 || (isOdd && !jokerId)}
               onClick={doAutoBalance}
             >
-              {selectedIds.length < 4
-                ? `Select at least 4 players (${selectedIds.length} selected)`
-                : selectedIds.length % 2 !== 0
-                ? `Need even number of players (${selectedIds.length} selected)`
+              {selectedIds.length < 3
+                ? `Select at least 3 players (${selectedIds.length} selected)`
+                : isOdd && !jokerId
+                ? `⭐ Pick a Joker for odd count (${selectedIds.length} players)`
                 : `⚡ Auto-Balance ${selectedIds.length} Players →`}
             </button>
           </div>

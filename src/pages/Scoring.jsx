@@ -330,14 +330,14 @@ export default function Scoring() {
     }
   }
 
-  async function handleBowlerPicked(name) {
+  async function handleBowlerPicked(name, striker) {
     setShowBowlerPick(false);
-    const updated = { ...innings, bowler: name };
+    const updated = { ...innings, bowler: name, striker: striker || innings.striker, nonStriker: striker && striker !== innings.striker ? innings.striker : innings.nonStriker };
     await saveInnings(updated);
   }
 
-  async function handleFirstBowlerPicked(name) {
-    const updated = { ...innings, bowler: name };
+  async function handleFirstBowlerPicked(name, striker) {
+    const updated = { ...innings, bowler: name, striker: striker || innings.striker, nonStriker: striker && striker !== innings.striker ? innings.striker : innings.nonStriker };
     await saveInnings(updated);
   }
 
