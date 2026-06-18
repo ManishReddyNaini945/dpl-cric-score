@@ -20,6 +20,8 @@ function TossScreen({ match, matchId, navigate, isAdmin }) {
   const [tossState, setTossState] = useState(meta.tossWinner ? 'done' : 'idle');
   const [tossWinner, setTossWinner] = useState(meta.tossWinner || '');
   const [elected, setElected] = useState('');
+  const [opener1, setOpener1] = useState('');
+  const [opener2, setOpener2] = useState('');
   const [saving, setSaving] = useState(false);
 
   function flipCoin() {
@@ -35,20 +37,21 @@ function TossScreen({ match, matchId, navigate, isAdmin }) {
     }, 2200);
   }
 
+  const battingTeamKey = tossWinner
+    ? (tossWinner === 'team1' ? (elected === 'bat' ? 'team1' : 'team2') : (elected === 'bat' ? 'team2' : 'team1'))
+    : '';
+  const battingNames = battingTeamKey === 'team1' ? meta.players1 : meta.players2;
+
   async function startMatch() {
-    if (!elected || saving) return;
+    if (!elected || !opener1 || !opener2 || saving) return;
     setSaving(true);
-    const battingTeamKey = tossWinner === 'team1'
-      ? (elected === 'bat' ? 'team1' : 'team2')
-      : (elected === 'bat' ? 'team2' : 'team1');
     const bowlingTeamKey = battingTeamKey === 'team1' ? 'team2' : 'team1';
-    const battingNames = battingTeamKey === 'team1' ? meta.players1 : meta.players2;
 
     let innings = makeEmptyInnings(battingTeamKey, bowlingTeamKey, meta.playerCount);
-    innings = addBatsmanToInnings(innings, battingNames[0]);
-    innings = addBatsmanToInnings(innings, battingNames[1]);
-    innings.striker = battingNames[0];
-    innings.nonStriker = battingNames[1];
+    innings = addBatsmanToInnings(innings, opener1);
+    innings = addBatsmanToInnings(innings, opener2);
+    innings.striker = opener1;
+    innings.nonStriker = opener2;
 
     try {
       await updateDoc(doc(db, 'matches', matchId), {
@@ -143,7 +146,7 @@ function TossScreen({ match, matchId, navigate, isAdmin }) {
             <div className="text-muted" style={{ marginBottom: 20, fontSize: '0.85rem' }}>Choose to bat or bowl first</div>
             <div style={{ display: 'flex', gap: 12, justifyContent: 'center', marginBottom: 20 }}>
               {['bat', 'bowl'].map(choice => (
-                <button key={choice} onClick={() => setElected(choice)} style={{
+                <button key={choice} onClick={() => { setElected(choice); setOpener1(''); setOpener2(''); }} style={{
                   padding: '14px 28px', borderRadius: 12, cursor: 'pointer', fontWeight: 700, fontSize: '1rem',
                   border: `2px solid ${elected === choice ? (choice === 'bat' ? 'var(--accent)' : '#a78bfa') : 'rgba(255,255,255,0.15)'}`,
                   background: elected === choice ? (choice === 'bat' ? 'rgba(56,189,248,0.15)' : 'rgba(167,139,250,0.15)') : 'var(--surface)',
@@ -159,10 +162,53 @@ function TossScreen({ match, matchId, navigate, isAdmin }) {
                 {' '}elected to <span style={{ color: 'var(--accent)', fontWeight: 700 }}>{elected}</span> first
               </div>
             )}
+
+            {/* Opening batsmen selection */}
+            {elected && battingNames?.length > 0 && (
+              <div style={{ textAlign: 'left', marginBottom: 20 }}>
+                <div style={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.8px', color: 'var(--text-muted)', marginBottom: 10 }}>
+                  🏏 Select Opening Batsmen
+                </div>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {battingNames.map(name => {
+                    const isO1 = opener1 === name;
+                    const isO2 = opener2 === name;
+                    return (
+                      <button key={name} onClick={() => {
+                        if (isO1) { setOpener1(''); return; }
+                        if (isO2) { setOpener2(''); return; }
+                        if (!opener1) { setOpener1(name); return; }
+                        if (!opener2) { setOpener2(name); return; }
+                      }} style={{
+                        display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px',
+                        borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                        border: `2px solid ${isO1 ? 'var(--accent)' : isO2 ? '#a78bfa' : 'rgba(255,255,255,0.1)'}`,
+                        background: isO1 ? 'rgba(56,189,248,0.1)' : isO2 ? 'rgba(167,139,250,0.1)' : 'var(--surface)',
+                        color: 'var(--white)',
+                      }}>
+                        <div style={{
+                          width: 28, height: 28, borderRadius: '50%', flexShrink: 0,
+                          background: isO1 ? 'var(--accent)' : isO2 ? '#a78bfa' : 'rgba(255,255,255,0.1)',
+                          color: (isO1 || isO2) ? '#0c1a28' : 'var(--white)',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          fontWeight: 800, fontSize: '0.75rem',
+                        }}>
+                          {isO1 ? '1' : isO2 ? '2' : name[0].toUpperCase()}
+                        </div>
+                        <span style={{ fontWeight: 600, flex: 1 }}>{name}</span>
+                        {isO1 && <span style={{ fontSize: '0.68rem', color: 'var(--accent)', fontWeight: 700 }}>STRIKER</span>}
+                        {isO2 && <span style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 700 }}>NON-STRIKER</span>}
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setTossState('idle'); setTossWinner(''); setElected(''); }}>Reflip</button>
-              <button className="btn btn-primary" style={{ flex: 2 }} disabled={!elected || saving} onClick={startMatch}>
-                {saving ? 'Starting…' : '🏏 Start Match!'}
+              <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => { setTossState('idle'); setTossWinner(''); setElected(''); setOpener1(''); setOpener2(''); }}>Reflip</button>
+              <button className="btn btn-primary" style={{ flex: 2 }} disabled={!elected || !opener1 || !opener2 || saving} onClick={startMatch}>
+                {saving ? 'Starting…' : !elected ? '🏏 Pick bat/bowl' : (!opener1 || !opener2) ? `🏏 Select openers (${[opener1,opener2].filter(Boolean).length}/2)` : '🏏 Start Match!'}
               </button>
             </div>
           </div>
@@ -184,6 +230,7 @@ export default function Scoring() {
   const [pendingWicketDelivery, setPendingWicketDelivery] = useState(null);
   const [saving, setSaving] = useState(false);
   const [showPOTM, setShowPOTM] = useState(false);
+  const [showOpenerPick, setShowOpenerPick] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'matches', id), snap => {
@@ -297,23 +344,14 @@ export default function Scoring() {
     const isFirstInnings = match.currentInnings === 0;
 
     if (isFirstInnings) {
-      // Set up second innings
-      const bat2 = updatedInnings.bowlingTeam;
-      const bowl2 = updatedInnings.battingTeam;
-      const players2 = bat2 === 'team1' ? meta.players1 : meta.players2;
-
-      let inn2 = makeEmptyInnings(bat2, bowl2, meta.playerCount);
-      inn2 = addBatsmanToInnings(inn2, players2[0]);
-      inn2 = addBatsmanToInnings(inn2, players2[1]);
-      inn2.striker = players2[0];
-      inn2.nonStriker = players2[1];
-
-      const newInnings = [updatedInnings, inn2];
+      // Save first innings, then let admin pick openers for 2nd
+      const newInnings = [updatedInnings];
       await updateDoc(doc(db, 'matches', id), {
         innings: newInnings,
         currentInnings: 1,
-        'meta.status': 'live',
+        'meta.status': 'innings_break',
       });
+      if (isAdmin) setShowOpenerPick(true);
     } else {
       // Match complete
       const updatedMatch = { ...match, innings: [...match.innings] };
@@ -375,6 +413,29 @@ export default function Scoring() {
   // Upcoming match — show toss for admin
   if (meta?.status === 'upcoming') {
     return <TossScreen match={match} matchId={id} navigate={navigate} isAdmin={isAdmin} />;
+  }
+
+  // Innings break — admin needs to pick 2nd innings openers
+  if (meta?.status === 'innings_break' && match.innings?.length === 1 && isAdmin) {
+    return (
+      <OpenerPickModal
+        players={match.innings[0].bowlingTeam === 'team1' ? meta.players1 : meta.players2}
+        onConfirm={async (o1, o2) => {
+          const bat2 = match.innings[0].bowlingTeam;
+          const bowl2 = match.innings[0].battingTeam;
+          let inn2 = makeEmptyInnings(bat2, bowl2, meta.playerCount);
+          inn2 = addBatsmanToInnings(inn2, o1);
+          inn2 = addBatsmanToInnings(inn2, o2);
+          inn2.striker = o1;
+          inn2.nonStriker = o2;
+          await updateDoc(doc(db, 'matches', id), {
+            innings: [match.innings[0], inn2],
+            currentInnings: 1,
+            'meta.status': 'live',
+          });
+        }}
+      />
+    );
   }
 
   // Innings break screen
@@ -680,6 +741,29 @@ export default function Scoring() {
         />
       )}
 
+      {/* 2nd innings opener selection */}
+      {showOpenerPick && meta && (
+        <OpenerPickModal
+          players={match?.innings?.[0]?.bowlingTeam === 'team1' ? meta.players1 : meta.players2}
+          onConfirm={async (o1, o2) => {
+            setShowOpenerPick(false);
+            const bat2 = match.innings[0].bowlingTeam;
+            const bowl2 = match.innings[0].battingTeam;
+            let inn2 = makeEmptyInnings(bat2, bowl2, meta.playerCount);
+            inn2 = addBatsmanToInnings(inn2, o1);
+            inn2 = addBatsmanToInnings(inn2, o2);
+            inn2.striker = o1;
+            inn2.nonStriker = o2;
+            const newInnings = [match.innings[0], inn2];
+            await updateDoc(doc(db, 'matches', id), {
+              innings: newInnings,
+              currentInnings: 1,
+              'meta.status': 'live',
+            });
+          }}
+        />
+      )}
+
       {/* Player of the Match modal */}
       {showPOTM && (
         <POTMModal
@@ -689,6 +773,61 @@ export default function Scoring() {
         />
       )}
     </>
+  );
+}
+
+function OpenerPickModal({ players, onConfirm }) {
+  const [o1, setO1] = useState('');
+  const [o2, setO2] = useState('');
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-sheet" style={{ maxHeight: '85vh', overflowY: 'auto' }}>
+        <div className="modal-title">Select Opening Batsmen</div>
+        <p className="text-muted text-center" style={{ marginBottom: 16, fontSize: '0.82rem' }}>
+          Tap to select Striker (1) then Non-Striker (2)
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+          {players.map(name => {
+            const isO1 = o1 === name;
+            const isO2 = o2 === name;
+            return (
+              <button key={name} onClick={() => {
+                if (isO1) { setO1(''); return; }
+                if (isO2) { setO2(''); return; }
+                if (!o1) { setO1(name); return; }
+                if (!o2) { setO2(name); return; }
+              }} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px',
+                borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                border: `2px solid ${isO1 ? 'var(--accent)' : isO2 ? '#a78bfa' : 'rgba(255,255,255,0.1)'}`,
+                background: isO1 ? 'rgba(56,189,248,0.1)' : isO2 ? 'rgba(167,139,250,0.1)' : 'var(--surface)',
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                  background: isO1 ? 'var(--accent)' : isO2 ? '#a78bfa' : 'rgba(255,255,255,0.1)',
+                  color: (isO1 || isO2) ? '#0c1a28' : 'var(--white)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 900, fontSize: '0.8rem',
+                }}>
+                  {isO1 ? '1' : isO2 ? '2' : name[0].toUpperCase()}
+                </div>
+                <span style={{ fontWeight: 600, color: 'var(--white)', flex: 1 }}>{name}</span>
+                {isO1 && <span style={{ fontSize: '0.68rem', color: 'var(--accent)', fontWeight: 700 }}>STRIKER</span>}
+                {isO2 && <span style={{ fontSize: '0.68rem', color: '#a78bfa', fontWeight: 700 }}>NON-STRIKER</span>}
+              </button>
+            );
+          })}
+        </div>
+        <button
+          className="btn btn-primary btn-full"
+          disabled={!o1 || !o2}
+          onClick={() => onConfirm(o1, o2)}
+        >
+          {(!o1 || !o2) ? `Select openers (${[o1,o2].filter(Boolean).length}/2)` : '🏏 Start Innings'}
+        </button>
+      </div>
+    </div>
   );
 }
 
