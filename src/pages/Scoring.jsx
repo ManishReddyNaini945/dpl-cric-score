@@ -7,7 +7,7 @@ import {
   formatOvers, getRunRate, getRequiredRunRate,
   getCurrentOverBalls, ballLabel, ballClass,
   makeEmptyInnings, addBatsmanToInnings, ensureBowler,
-  applyDelivery, isInningsComplete, getWinnerMessage,
+  applyDelivery, isInningsComplete, getWinnerMessage, rebuildInnings,
 } from '../utils/cricket';
 import WicketModal from '../components/WicketModal';
 import BowlerSelectModal from '../components/BowlerSelectModal';
@@ -232,7 +232,7 @@ export default function Scoring() {
                  extraMode === EXTRA_MODES.BYE ? 'bye' : 'legbye';
 
     const overIndex = currentOverIndex();
-    let delivery = { type, runs, overIndex, isWicket: false, wicket: null };
+    let delivery = { type, runs, overIndex, isWicket: false, wicket: null, bowler: innings.bowler };
 
     if (type === 'wide' && runs === 0) delivery.runs = 0;
 
@@ -255,6 +255,16 @@ export default function Scoring() {
     }
   }
 
+  async function handleUndo() {
+    if (!innings || saving || !innings.deliveries?.length) return;
+    const last = innings.deliveries[innings.deliveries.length - 1];
+    if (!last.bowler) return; // old data without bowler field — can't undo
+    setSaving(true);
+    const rebuilt = rebuildInnings(innings, innings.deliveries.slice(0, -1));
+    await saveInnings(rebuilt);
+    setSaving(false);
+  }
+
   function handleWicketClick() {
     if (!innings || saving || needsBowler) return;
     setShowWicket(true);
@@ -264,7 +274,7 @@ export default function Scoring() {
     setShowWicket(false);
     const overIndex = currentOverIndex();
     const type = extraMode === EXTRA_MODES.NOBALL ? 'noball' : 'normal';
-    const delivery = { type, runs: 0, overIndex, isWicket: true, wicket: wicketInfo };
+    const delivery = { type, runs: 0, overIndex, isWicket: true, wicket: wicketInfo, bowler: innings.bowler };
 
     let updated = ensureBowler(innings, innings.bowler);
     updated = applyDelivery(updated, delivery);
@@ -572,6 +582,16 @@ export default function Scoring() {
           >
             Leg Bye
           </button>
+          {isAdmin && (
+            <button
+              className="extra-btn"
+              onClick={handleUndo}
+              disabled={saving || !innings?.deliveries?.length || !innings?.deliveries?.[innings.deliveries.length - 1]?.bowler}
+              style={{ color: 'var(--danger-light)', fontWeight: 700 }}
+            >
+              ↩ Undo
+            </button>
+          )}
           <Link to={`/match/${id}/scorecard`} className="extra-btn" style={{ textDecoration: 'none', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             Scorecard
           </Link>

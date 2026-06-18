@@ -172,6 +172,25 @@ export function applyDelivery(innings, delivery) {
   return updated;
 }
 
+export function rebuildInnings(original, newDeliveries) {
+  let rebuilt = makeEmptyInnings(original.battingTeam, original.bowlingTeam, original.players);
+  const opener1 = original.battingOrder[0];
+  const opener2 = original.battingOrder[1];
+  if (opener1) rebuilt = addBatsmanToInnings(rebuilt, opener1);
+  if (opener2) rebuilt = addBatsmanToInnings(rebuilt, opener2);
+  rebuilt.striker = opener1 || '';
+  rebuilt.nonStriker = opener2 || '';
+
+  for (const delivery of newDeliveries) {
+    if (delivery.bowler && delivery.bowler !== rebuilt.bowler) {
+      rebuilt.bowler = delivery.bowler;
+      rebuilt = ensureBowler(rebuilt, delivery.bowler);
+    }
+    rebuilt = applyDelivery(rebuilt, delivery);
+  }
+  return rebuilt;
+}
+
 export function formatBowlerOvers(balls) {
   return `${Math.floor(balls / 6)}.${balls % 6}`;
 }

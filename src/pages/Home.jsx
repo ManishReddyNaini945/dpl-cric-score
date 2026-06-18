@@ -90,6 +90,7 @@ export default function Home() {
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const [squadMatch, setSquadMatch] = useState(null);
   const [deleteTarget, setDeleteTarget] = useState(null);
+  const [squadOpen, setSquadOpen] = useState({});
   const [editTarget, setEditTarget] = useState(null); // full match doc
   const [editFields, setEditFields] = useState({});
   const navigate = useNavigate();
@@ -431,21 +432,33 @@ export default function Home() {
         </Link>
 
         {/* ── Playing XI section ── */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '0 14px 12px' }}>
-          <div style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)', padding: '10px 0 8px', display: 'flex', alignItems: 'center', gap: 6 }}>
-            <span>👥</span> Playing XI
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '0 12px' }}>
-            <div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.team1}</div>
-              <SquadList players={m.players1} roles={m.playerRoles1} cap={m.captain1} vc={m.vc1} color="var(--accent)" />
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            onClick={e => { e.preventDefault(); setSquadOpen(prev => ({ ...prev, [match.id]: !prev[match.id] })); }}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 6,
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '10px 14px 8px', textAlign: 'left',
+            }}
+          >
+            <span style={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'var(--text-muted)' }}>👥 Playing XI</span>
+            <span style={{ marginLeft: 'auto', color: 'var(--text-muted)', fontSize: '0.72rem', transition: 'transform 0.2s', display: 'inline-block', transform: squadOpen[match.id] ? 'rotate(180deg)' : 'rotate(0deg)' }}>▼</span>
+          </button>
+          {squadOpen[match.id] && (
+            <div style={{ padding: '0 14px 12px' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1px 1fr', gap: '0 12px' }}>
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.team1}</div>
+                  <SquadList players={m.players1} roles={m.playerRoles1} cap={m.captain1} vc={m.vc1} color="var(--accent)" />
+                </div>
+                <div style={{ background: 'rgba(255,255,255,0.07)' }} />
+                <div>
+                  <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a78bfa', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.team2}</div>
+                  <SquadList players={m.players2} roles={m.playerRoles2} cap={m.captain2} vc={m.vc2} color="#a78bfa" />
+                </div>
+              </div>
             </div>
-            <div style={{ background: 'rgba(255,255,255,0.07)' }} />
-            <div>
-              <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a78bfa', marginBottom: 6, textTransform: 'uppercase', letterSpacing: '0.5px' }}>{m.team2}</div>
-              <SquadList players={m.players2} roles={m.playerRoles2} cap={m.captain2} vc={m.vc2} color="#a78bfa" />
-            </div>
-          </div>
+          )}
         </div>
 
         {/* ── Bottom action bar ── */}
