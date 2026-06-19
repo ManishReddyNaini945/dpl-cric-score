@@ -232,6 +232,7 @@ export default function Scoring() {
   const [showPOTM, setShowPOTM] = useState(false);
   const [showOpenerPick, setShowOpenerPick] = useState(false);
   const [retireTarget, setRetireTarget] = useState(null); // name of batsman retiring
+  const [showMidOverBowler, setShowMidOverBowler] = useState(false);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'matches', id), snap => {
@@ -311,6 +312,12 @@ export default function Scoring() {
     const rebuilt = rebuildInnings(innings, innings.deliveries.slice(0, -1));
     await saveInnings(rebuilt);
     setSaving(false);
+  }
+
+  async function handleMidOverBowler(newBowler) {
+    setShowMidOverBowler(false);
+    const updated = ensureBowler({ ...innings, bowler: newBowler }, newBowler);
+    await saveInnings(updated);
   }
 
   async function handleRetireConfirm(newBatsmanName) {
@@ -696,6 +703,16 @@ export default function Scoring() {
               ↩ Undo
             </button>
           )}
+          {isAdmin && (
+            <button
+              className="extra-btn"
+              onClick={() => setShowMidOverBowler(true)}
+              disabled={saving}
+              style={{ color: '#fb923c', fontWeight: 700 }}
+            >
+              🚑 Injury
+            </button>
+          )}
           <Link to={`/match/${id}/scorecard`} className="extra-btn" style={{ textDecoration: 'none', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
             Scorecard
           </Link>
@@ -784,6 +801,18 @@ export default function Scoring() {
         />
       )}
 
+      {/* Mid-over bowler change (injury) */}
+      {showMidOverBowler && innings && (
+        <MidOverBowlerModal
+          players={bowlingPlayers}
+          currentBowler={innings.bowler}
+          innings={innings}
+          maxOversPerBowler={Math.ceil(meta.overs / 2)}
+          onConfirm={handleMidOverBowler}
+          onCancel={() => setShowMidOverBowler(false)}
+        />
+      )}
+
       {/* Retire Out modal */}
       {retireTarget && innings && (
         <RetireModal
@@ -829,6 +858,70 @@ export default function Scoring() {
         />
       )}
     </>
+  );
+}
+
+function MidOverBowlerModal({ players, currentBowler, innings, maxOversPerBowler, onConfirm, onCancel }) {
+  const [selected, setSelected] = useState('');
+
+  function bowlerOvers(name) {
+    const b = innings.bowlers[name];
+    return b ? Math.floor(b.balls / 6) : 0;
+  }
+
+  // Injury replacement: any bowler except the injured one is eligible
+  // (no consecutive-over restriction since it's a special case)
+  const eligible = players.filter(p => p !== currentBowler);
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-sheet" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: '1.8rem', marginBottom: 6 }}>🚑</div>
+          <div className="modal-title" style={{ margin: 0 }}>Bowler Injury</div>
+          <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: 4 }}>
+            <span style={{ color: '#fb923c', fontWeight: 700 }}>{currentBowler}</span> is injured — select replacement to complete this over
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+          {eligible.map(name => {
+            const overs = bowlerOvers(name);
+            const b = innings.bowlers[name];
+            const atLimit = overs >= maxOversPerBowler;
+            return (
+              <button key={name} onClick={() => !atLimit && setSelected(name)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px',
+                borderRadius: 10, cursor: atLimit ? 'not-allowed' : 'pointer',
+                border: `2px solid ${selected === name ? '#fb923c' : 'rgba(255,255,255,0.1)'}`,
+                background: selected === name ? 'rgba(251,146,60,0.1)' : 'var(--surface)',
+                opacity: atLimit ? 0.45 : 1,
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                  background: selected === name ? '#fb923c' : 'rgba(255,255,255,0.1)',
+                  color: selected === name ? '#0c1a28' : 'var(--white)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 900, fontSize: '0.85rem',
+                }}>
+                  {name[0].toUpperCase()}
+                </div>
+                <span style={{ fontWeight: 600, color: 'var(--white)', flex: 1 }}>{name}</span>
+                {b && <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{Math.floor(b.balls/6)}.{b.balls%6} ov · {b.runs}R · {b.wickets}W</span>}
+                {atLimit && <span style={{ fontSize: '0.68rem', color: 'var(--danger-light)' }}>quota full</span>}
+              </button>
+            );
+          })}
+        </div>
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>
+          <button className="btn btn-primary" style={{ flex: 2, background: '#fb923c', borderColor: '#fb923c' }} disabled={!selected} onClick={() => onConfirm(selected)}>
+            🚑 Replace Bowler
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
