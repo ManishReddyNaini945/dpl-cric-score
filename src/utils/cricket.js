@@ -172,6 +172,20 @@ export function applyDelivery(innings, delivery) {
   return updated;
 }
 
+export function retireBatsman(innings, retiringName, newBatsmanName) {
+  let updated = {
+    ...innings,
+    batsmen: {
+      ...innings.batsmen,
+      [retiringName]: { ...innings.batsmen[retiringName], out: true, dismissal: 'Retired Out' },
+    },
+    striker:    innings.striker    === retiringName ? newBatsmanName : innings.striker,
+    nonStriker: innings.nonStriker === retiringName ? newBatsmanName : innings.nonStriker,
+  };
+  updated = addBatsmanToInnings(updated, newBatsmanName);
+  return updated;
+}
+
 export function rebuildInnings(original, newDeliveries) {
   let rebuilt = makeEmptyInnings(original.battingTeam, original.bowlingTeam, original.players);
   const opener1 = original.battingOrder[0];

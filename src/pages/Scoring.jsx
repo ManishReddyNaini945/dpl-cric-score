@@ -7,7 +7,7 @@ import {
   formatOvers, getRunRate, getRequiredRunRate,
   getCurrentOverBalls, ballLabel, ballClass,
   makeEmptyInnings, addBatsmanToInnings, ensureBowler,
-  applyDelivery, isInningsComplete, getWinnerMessage, rebuildInnings,
+  applyDelivery, isInningsComplete, getWinnerMessage, rebuildInnings, retireBatsman,
 } from '../utils/cricket';
 import WicketModal from '../components/WicketModal';
 import BowlerSelectModal from '../components/BowlerSelectModal';
@@ -231,6 +231,7 @@ export default function Scoring() {
   const [saving, setSaving] = useState(false);
   const [showPOTM, setShowPOTM] = useState(false);
   const [showOpenerPick, setShowOpenerPick] = useState(false);
+  const [retireTarget, setRetireTarget] = useState(null); // name of batsman retiring
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, 'matches', id), snap => {
@@ -310,6 +311,13 @@ export default function Scoring() {
     const rebuilt = rebuildInnings(innings, innings.deliveries.slice(0, -1));
     await saveInnings(rebuilt);
     setSaving(false);
+  }
+
+  async function handleRetireConfirm(newBatsmanName) {
+    if (!innings || !retireTarget) return;
+    setRetireTarget(null);
+    const updated = retireBatsman(innings, retireTarget, newBatsmanName);
+    await saveInnings(updated);
   }
 
   function handleWicketClick() {
@@ -537,6 +545,11 @@ export default function Scoring() {
   }
 
   function renderBatsmen(inn) {
+    const battingPlayers = inn.battingTeam === 'team1' ? meta.players1 : meta.players2;
+    const usedPlayers = inn.battingOrder || [];
+    const availableForRetire = battingPlayers.filter(n => !usedPlayers.includes(n));
+    const canRetire = isAdmin && availableForRetire.length > 0;
+
     return (
       <div className="batsmen-table">
         <div className="table-header">
@@ -545,6 +558,7 @@ export default function Scoring() {
           <div style={{ textAlign: 'right' }}>B</div>
           <div style={{ textAlign: 'right' }}>4s</div>
           <div style={{ textAlign: 'right' }}>6s</div>
+          {canRetire && <div />}
         </div>
         {[inn.striker, inn.nonStriker].filter(Boolean).map(name => {
           const b = inn.batsmen[name] || { runs: 0, balls: 0, fours: 0, sixes: 0 };
@@ -557,6 +571,16 @@ export default function Scoring() {
               <div className="stat">{b.balls}</div>
               <div className="stat">{b.fours}</div>
               <div className="stat">{b.sixes}</div>
+              {canRetire && (
+                <div style={{ textAlign: 'right' }}>
+                  <button
+                    onClick={() => setRetireTarget(name)}
+                    style={{ background: 'rgba(250,204,21,0.12)', border: '1px solid rgba(250,204,21,0.3)', borderRadius: 6, color: '#facc15', fontSize: '0.62rem', fontWeight: 800, padding: '2px 6px', cursor: 'pointer', whiteSpace: 'nowrap' }}
+                  >
+                    RET
+                  </button>
+                </div>
+              )}
             </div>
           );
         })}
@@ -760,6 +784,19 @@ export default function Scoring() {
         />
       )}
 
+      {/* Retire Out modal */}
+      {retireTarget && innings && (
+        <RetireModal
+          retiringName={retireTarget}
+          available={
+            (innings.battingTeam === 'team1' ? meta.players1 : meta.players2)
+              .filter(n => !(innings.battingOrder || []).includes(n))
+          }
+          onConfirm={handleRetireConfirm}
+          onCancel={() => setRetireTarget(null)}
+        />
+      )}
+
       {/* 2nd innings opener selection */}
       {showOpenerPick && meta && (
         <OpenerPickModal
@@ -792,6 +829,59 @@ export default function Scoring() {
         />
       )}
     </>
+  );
+}
+
+function RetireModal({ retiringName, available, onConfirm, onCancel }) {
+  const [selected, setSelected] = useState('');
+
+  return (
+    <div className="modal-overlay">
+      <div className="modal-sheet">
+        <div style={{ textAlign: 'center', marginBottom: 16 }}>
+          <div style={{ fontSize: '1.8rem', marginBottom: 6 }}>🏏</div>
+          <div className="modal-title" style={{ margin: 0 }}>Retire Out</div>
+          <div className="text-muted" style={{ fontSize: '0.8rem', marginTop: 4 }}>
+            <span style={{ color: '#facc15', fontWeight: 700 }}>{retiringName}</span> retires — select new batsman
+          </div>
+        </div>
+
+        {available.length === 0 ? (
+          <div className="text-muted text-center" style={{ padding: '16px 0', fontSize: '0.85rem' }}>
+            No more batsmen available
+          </div>
+        ) : (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginBottom: 20 }}>
+            {available.map(name => (
+              <button key={name} onClick={() => setSelected(name)} style={{
+                display: 'flex', alignItems: 'center', gap: 10, padding: '11px 14px',
+                borderRadius: 10, cursor: 'pointer', textAlign: 'left',
+                border: `2px solid ${selected === name ? 'var(--accent)' : 'rgba(255,255,255,0.1)'}`,
+                background: selected === name ? 'rgba(56,189,248,0.1)' : 'var(--surface)',
+              }}>
+                <div style={{
+                  width: 32, height: 32, borderRadius: '50%', flexShrink: 0,
+                  background: selected === name ? 'var(--accent)' : 'rgba(255,255,255,0.1)',
+                  color: selected === name ? '#0c1a28' : 'var(--white)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  fontWeight: 900, fontSize: '0.85rem',
+                }}>
+                  {name[0].toUpperCase()}
+                </div>
+                <span style={{ fontWeight: 600, color: 'var(--white)' }}>{name}</span>
+              </button>
+            ))}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 10 }}>
+          <button className="btn btn-ghost" style={{ flex: 1 }} onClick={onCancel}>Cancel</button>
+          <button className="btn btn-primary" style={{ flex: 2 }} disabled={!selected} onClick={() => onConfirm(selected)}>
+            Confirm
+          </button>
+        </div>
+      </div>
+    </div>
   );
 }
 
