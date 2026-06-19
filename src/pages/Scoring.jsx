@@ -466,7 +466,26 @@ export default function Scoring() {
           {renderCurrentOver(inn2)}
           {renderBatsmen(inn2)}
           {renderBowler(inn2)}
-          {inn2Complete ? null : renderActionPad()}
+          {!inn2Complete && (() => {
+            const inn2NeedsBowler = !inn2.bowler;
+            const inn2BowlingPlayers = inn2.bowlingTeam === 'team1' ? meta.players1 : meta.players2;
+            if (isAdmin && (inn2NeedsBowler || showBowlerPick)) {
+              return (
+                <div className="bowler-select">
+                  <div className="label">Select Bowler</div>
+                  <BowlerSelectModal
+                    players={inn2BowlingPlayers}
+                    currentBowler={inn2.bowler}
+                    innings={inn2}
+                    maxOversPerBowler={Math.ceil(meta.overs / 2)}
+                    onConfirm={inn2NeedsBowler ? handleFirstBowlerPicked : handleBowlerPicked}
+                  />
+                </div>
+              );
+            }
+            if (!inn2NeedsBowler && !showBowlerPick) return renderActionPad();
+            return null;
+          })()}
         </div>
       </>
     );
