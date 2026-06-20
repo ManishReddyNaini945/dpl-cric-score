@@ -247,7 +247,9 @@ export default function Scoring() {
   const meta = match?.meta;
 
   // Need bowler selection
-  const needsBowler = innings && !innings.bowler && !isInningsComplete(innings, meta?.overs);
+  const inn1Target = match?.currentInnings === 1 && match?.innings?.length >= 1
+    ? match.innings[0].runs + 1 : null;
+  const needsBowler = innings && !innings.bowler && !isInningsComplete(innings, meta?.overs, inn1Target);
 
   function currentOverIndex() {
     if (!innings) return 0;
@@ -291,7 +293,9 @@ export default function Scoring() {
 
     setExtraMode(EXTRA_MODES.NONE);
 
-    const complete = isInningsComplete(updated, meta.overs);
+    const inn2Target = match.currentInnings === 1 && match.innings?.length >= 1
+      ? match.innings[0].runs + 1 : null;
+    const complete = isInningsComplete(updated, meta.overs, inn2Target);
     if (complete) updated.complete = true;
 
     // End of over — need new bowler
@@ -343,7 +347,9 @@ export default function Scoring() {
     updated = applyDelivery(updated, delivery);
     setExtraMode(EXTRA_MODES.NONE);
 
-    const complete = isInningsComplete(updated, meta.overs);
+    const inn2Target = match.currentInnings === 1 && match.innings?.length >= 1
+      ? match.innings[0].runs + 1 : null;
+    const complete = isInningsComplete(updated, meta.overs, inn2Target);
     if (complete) updated.complete = true;
 
     const endedOver = updated.legalBalls % 6 === 0 && updated.legalBalls > 0 && !complete;
@@ -462,7 +468,7 @@ export default function Scoring() {
     const bat1Name = inn1.battingTeam === 'team1' ? meta.team1 : meta.team2;
     const bat2Name = inn2.battingTeam === 'team1' ? meta.team1 : meta.team2;
     const target = inn1.runs + 1;
-    const inn2Complete = isInningsComplete(inn2, meta.overs);
+    const inn2Complete = isInningsComplete(inn2, meta.overs, target);
     const isCompleted = meta.status === 'completed';
 
     if (isCompleted && !showPOTM) {
@@ -483,7 +489,7 @@ export default function Scoring() {
           {renderCurrentOver(inn2)}
           {renderBatsmen(inn2)}
           {renderBowler(inn2)}
-          {!inn2Complete && inn2.legalBalls > 0 && (
+          {!inn2Complete && inn2.legalBalls >= 6 && (
             <MatchInsights innings={inn2} meta={meta} target={target} inn1={inn1} />
           )}
           {!inn2Complete && (() => {
@@ -743,7 +749,7 @@ export default function Scoring() {
         {innings && renderCurrentOver(innings)}
         {innings && renderBatsmen(innings)}
         {innings && renderBowler(innings)}
-        {innings && !isInningsComplete(innings, meta.overs) && innings.legalBalls > 0 && (
+        {innings && !isInningsComplete(innings, meta.overs) && innings.legalBalls >= 6 && (
           <MatchInsights innings={innings} meta={meta} target={target} />
         )}
 

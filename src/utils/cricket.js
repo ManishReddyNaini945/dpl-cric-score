@@ -17,9 +17,10 @@ export function getRequiredRunRate(target, runs, legalBalls, totalLegalBalls) {
   return ((needed / left) * 6).toFixed(2);
 }
 
-export function isInningsComplete(innings, maxOvers) {
+export function isInningsComplete(innings, maxOvers, target = null) {
   const maxWickets = innings.players - 1;
   const maxBalls = maxOvers * 6;
+  if (target !== null && innings.runs >= target) return true;
   return innings.wickets >= maxWickets || innings.legalBalls >= maxBalls;
 }
 
