@@ -10,7 +10,7 @@ export default function BowlerSelectModal({ players, currentBowler, innings, max
   }
 
   function isEligible(name) {
-    return bowlerOvers(name) < maxOversPerBowler && name !== currentBowler;
+    return bowlerOvers(name) < maxOversPerBowler;
   }
 
   function confirm() {
@@ -27,7 +27,7 @@ export default function BowlerSelectModal({ players, currentBowler, innings, max
         {/* Bowler selection */}
         <div className="modal-title">Select Next Bowler</div>
         <p className="text-muted text-center" style={{ marginBottom: 14, fontSize: '0.82rem' }}>
-          Same bowler cannot bowl consecutive overs
+          Each bowler can bowl max {maxOversPerBowler} overs
         </p>
         <div className="option-list" style={{ marginBottom: 20 }}>
           {players.map(p => {
@@ -46,11 +46,6 @@ export default function BowlerSelectModal({ players, currentBowler, innings, max
                 {b && (
                   <span style={{ float: 'right', color: 'var(--text-muted)', fontSize: '0.8rem' }}>
                     {Math.floor(b.balls / 6)}.{b.balls % 6} ov · {b.runs} runs · {b.wickets}W
-                  </span>
-                )}
-                {p === currentBowler && (
-                  <span style={{ float: 'right', color: 'var(--danger-light)', fontSize: '0.78rem' }}>
-                    {' '}(prev over)
                   </span>
                 )}
               </button>
