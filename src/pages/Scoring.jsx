@@ -390,6 +390,7 @@ export default function Scoring() {
   }
 
   async function handleFirstBowlerPicked(name, striker) {
+    setShowBowlerPick(false);
     const updated = { ...innings, bowler: name, striker: striker || innings.striker, nonStriker: striker && striker !== innings.striker ? innings.striker : innings.nonStriker };
     await saveInnings(updated);
   }
@@ -791,16 +792,6 @@ export default function Scoring() {
         />
       )}
 
-      {showBowlerPick && !needsBowler && (
-        <BowlerSelectModal
-          players={bowlingPlayers}
-          currentBowler={innings?.bowler}
-          innings={innings}
-          maxOversPerBowler={Math.ceil(meta.overs / 2)}
-          onConfirm={handleBowlerPicked}
-        />
-      )}
-
       {/* Mid-over bowler change (injury) */}
       {showMidOverBowler && innings && (
         <MidOverBowlerModal
@@ -853,6 +844,7 @@ export default function Scoring() {
       {showPOTM && (
         <POTMModal
           meta={meta}
+          innings={match?.innings || []}
           matchId={id}
           onDone={() => { setShowPOTM(false); navigate(`/match/${id}/scorecard`); }}
         />
@@ -1033,9 +1025,29 @@ function OpenerPickModal({ players, onConfirm }) {
   );
 }
 
-function POTMModal({ meta, matchId, onDone }) {
+function calcPOTMScores(innings) {
+  const scores = {};
+  for (const inn of innings) {
+    // Batting points: 1 per run, 2 per six, 0.5 per four, bonus for 50+/30+
+    for (const [name, b] of Object.entries(inn.batsmen || {})) {
+      if (!inn.battingOrder?.includes(name)) continue;
+      const pts = b.runs + b.sixes * 2 + b.fours * 0.5 + (b.runs >= 50 ? 15 : b.runs >= 30 ? 8 : 0);
+      scores[name] = (scores[name] || 0) + pts;
+    }
+    // Bowling points: 20 per wicket, bonus for 2-fer/3-fer, -1 per extra run conceded
+    for (const [name, b] of Object.entries(inn.bowlers || {})) {
+      const pts = b.wickets * 20 + (b.wickets >= 3 ? 10 : b.wickets >= 2 ? 5 : 0);
+      scores[name] = (scores[name] || 0) + pts;
+    }
+  }
+  return scores;
+}
+
+function POTMModal({ meta, matchId, innings, onDone }) {
   const allPlayers = [...(meta.players1 || []), ...(meta.players2 || [])];
-  const [selected, setSelected] = useState('');
+  const scores = calcPOTMScores(innings);
+  const autoSuggested = allPlayers.reduce((best, p) => (scores[p] || 0) > (scores[best] || 0) ? p : best, allPlayers[0] || '');
+  const [selected, setSelected] = useState(autoSuggested);
   const [saving, setSaving] = useState(false);
 
   async function save() {
@@ -1051,20 +1063,26 @@ function POTMModal({ meta, matchId, onDone }) {
         <div style={{ textAlign: 'center', marginBottom: 20 }}>
           <div style={{ fontSize: '2.5rem', marginBottom: 8 }}>🏆</div>
           <div className="modal-title" style={{ margin: 0 }}>Player of the Match</div>
-          <div className="text-muted" style={{ fontSize: '0.82rem', marginTop: 4 }}>Select the standout performer</div>
+          <div className="text-muted" style={{ fontSize: '0.82rem', marginTop: 4 }}>Auto-suggested based on performance · tap to change</div>
         </div>
+
+        {autoSuggested && (
+          <div style={{ margin: '0 0 16px', padding: '8px 12px', borderRadius: 8, background: 'rgba(250,204,21,0.08)', border: '1px solid rgba(250,204,21,0.25)', fontSize: '0.78rem', color: '#facc15' }}>
+            ⭐ Suggested: <strong>{autoSuggested}</strong>
+          </div>
+        )}
 
         <div style={{ marginBottom: 16 }}>
           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: 'var(--accent)', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>{meta.team1}</div>
           {(meta.players1 || []).map(name => (
-            <PlayerRow key={name} name={name} selected={selected === name} onSelect={() => setSelected(name)} />
+            <PlayerRow key={name} name={name} selected={selected === name} isSuggested={name === autoSuggested} score={scores[name] || 0} onSelect={() => setSelected(name)} />
           ))}
         </div>
 
         <div style={{ marginBottom: 20 }}>
           <div style={{ fontSize: '0.72rem', fontWeight: 700, color: '#a78bfa', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 8 }}>{meta.team2}</div>
           {(meta.players2 || []).map(name => (
-            <PlayerRow key={name} name={name} selected={selected === name} onSelect={() => setSelected(name)} />
+            <PlayerRow key={name} name={name} selected={selected === name} isSuggested={name === autoSuggested} score={scores[name] || 0} onSelect={() => setSelected(name)} />
           ))}
         </div>
 
@@ -1079,12 +1097,12 @@ function POTMModal({ meta, matchId, onDone }) {
   );
 }
 
-function PlayerRow({ name, selected, onSelect }) {
+function PlayerRow({ name, selected, isSuggested, score, onSelect }) {
   return (
     <div onClick={onSelect} style={{
       display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px',
       borderRadius: 10, marginBottom: 6, cursor: 'pointer',
-      border: `2px solid ${selected ? '#facc15' : 'rgba(255,255,255,0.07)'}`,
+      border: `2px solid ${selected ? '#facc15' : isSuggested ? 'rgba(250,204,21,0.3)' : 'rgba(255,255,255,0.07)'}`,
       background: selected ? 'rgba(250,204,21,0.08)' : 'var(--card-bg)',
       transition: 'all 0.15s',
     }}>
@@ -1098,6 +1116,8 @@ function PlayerRow({ name, selected, onSelect }) {
         {selected ? '★' : name[0].toUpperCase()}
       </div>
       <span style={{ fontWeight: 600, flex: 1 }}>{name}</span>
+      {score > 0 && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginRight: 4 }}>{Math.round(score)} pts</span>}
+      {isSuggested && !selected && <span style={{ fontSize: '0.68rem', color: '#facc15', fontWeight: 700, background: 'rgba(250,204,21,0.15)', borderRadius: 4, padding: '1px 5px' }}>⭐ AI Pick</span>}
       {selected && <span style={{ color: '#facc15', fontWeight: 800, fontSize: '0.9rem' }}>🏆</span>}
     </div>
   );
