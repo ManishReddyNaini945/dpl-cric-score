@@ -7,7 +7,7 @@ import {
   formatOvers, getRunRate, getRequiredRunRate,
   getCurrentOverBalls, ballLabel, ballClass,
   makeEmptyInnings, addBatsmanToInnings, ensureBowler,
-  applyDelivery, isInningsComplete, getWinnerMessage, rebuildInnings, retireBatsman,
+  applyDelivery, isInningsComplete, getWinnerMessage, rebuildInnings, retireBatsman, getLastBowler,
 } from '../utils/cricket';
 import WicketModal from '../components/WicketModal';
 import BowlerSelectModal from '../components/BowlerSelectModal';
@@ -495,7 +495,7 @@ export default function Scoring() {
                   <div className="label">Select Bowler</div>
                   <BowlerSelectModal
                     players={inn2BowlingPlayers}
-                    currentBowler={inn2.bowler}
+                    currentBowler={inn2.bowler || getLastBowler(inn2)}
                     innings={inn2}
                     maxOversPerBowler={Math.ceil(meta.overs / 2)}
                     onConfirm={inn2NeedsBowler ? handleFirstBowlerPicked : handleBowlerPicked}
@@ -753,7 +753,7 @@ export default function Scoring() {
             <div className="label">Select Bowler</div>
             <BowlerSelectModal
               players={bowlingPlayers}
-              currentBowler={innings?.bowler}
+              currentBowler={innings?.bowler || getLastBowler(innings)}
               innings={innings}
               maxOversPerBowler={Math.ceil(meta.overs / 2)}
               onConfirm={needsBowler ? handleFirstBowlerPicked : handleBowlerPicked}

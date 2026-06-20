@@ -205,6 +205,14 @@ export function rebuildInnings(original, newDeliveries) {
   return rebuilt;
 }
 
+export function getLastBowler(innings) {
+  const deliveries = innings?.deliveries || [];
+  for (let i = deliveries.length - 1; i >= 0; i--) {
+    if (deliveries[i].bowler) return deliveries[i].bowler;
+  }
+  return '';
+}
+
 export function formatBowlerOvers(balls) {
   return `${Math.floor(balls / 6)}.${balls % 6}`;
 }
