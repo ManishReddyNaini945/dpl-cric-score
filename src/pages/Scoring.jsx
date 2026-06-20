@@ -11,6 +11,7 @@ import {
 } from '../utils/cricket';
 import WicketModal from '../components/WicketModal';
 import BowlerSelectModal from '../components/BowlerSelectModal';
+import MatchInsights from '../components/MatchInsights';
 
 const EXTRA_MODES = { NONE: 'none', WIDE: 'wide', NOBALL: 'noball', BYE: 'bye', LEGBYE: 'legbye' };
 
@@ -482,6 +483,9 @@ export default function Scoring() {
           {renderCurrentOver(inn2)}
           {renderBatsmen(inn2)}
           {renderBowler(inn2)}
+          {!inn2Complete && inn2.legalBalls > 0 && (
+            <MatchInsights innings={inn2} meta={meta} target={target} inn1={inn1} />
+          )}
           {!inn2Complete && (() => {
             const inn2NeedsBowler = !inn2.bowler;
             const inn2BowlingPlayers = inn2.bowlingTeam === 'team1' ? meta.players1 : meta.players2;
@@ -739,6 +743,9 @@ export default function Scoring() {
         {innings && renderCurrentOver(innings)}
         {innings && renderBatsmen(innings)}
         {innings && renderBowler(innings)}
+        {innings && !isInningsComplete(innings, meta.overs) && innings.legalBalls > 0 && (
+          <MatchInsights innings={innings} meta={meta} target={target} />
+        )}
 
         {/* Bowler pick — admin only */}
         {isAdmin && (needsBowler || showBowlerPick) && (
