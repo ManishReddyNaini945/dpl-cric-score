@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { collection, addDoc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, deleteDoc, doc, onSnapshot, query, orderBy, serverTimestamp } from 'firebase/firestore';
 import { db } from '../firebase';
 import { makeEmptyInnings, addBatsmanToInnings } from '../utils/cricket';
 import { RoleBadge } from './Players';
@@ -72,12 +72,26 @@ export default function NewMatch() {
   const [tossWinner, setTossWinner] = useState('');
   const [elected, setElected] = useState('');
 
+  // Saved lineups
+  const [savedLineups, setSavedLineups] = useState([]);
+  const [showLineupsModal, setShowLineupsModal] = useState(false);
+  const [savingLineup, setSavingLineup] = useState(false);
+  const [lineupSaved, setLineupSaved] = useState(false);
+
   useEffect(() => {
     const q = query(collection(db, 'players'), orderBy('createdAt', 'asc'));
     const unsub = onSnapshot(q, snap => {
       setAllPlayers(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       setLoadingPlayers(false);
     }, () => setLoadingPlayers(false));
+    return unsub;
+  }, []);
+
+  useEffect(() => {
+    const unsub = onSnapshot(
+      query(collection(db, 'savedLineups'), orderBy('savedAt', 'desc')),
+      snap => setSavedLineups(snap.docs.map(d => ({ id: d.id, ...d.data() })))
+    );
     return unsub;
   }, []);
 
@@ -177,6 +191,43 @@ export default function NewMatch() {
     if ((teamNum === 1 ? captain1 : captain2) === playerId) return 'C';
     if ((teamNum === 1 ? vc1 : vc2) === playerId) return 'VC';
     return null;
+  }
+
+  async function saveLineup() {
+    if (savingLineup) return;
+    setSavingLineup(true);
+    await addDoc(collection(db, 'savedLineups'), {
+      team1Name: team1Name.trim() || 'Team 1',
+      team2Name: team2Name.trim() || 'Team 2',
+      team1Players: team1.map(p => ({ id: p.id, name: p.name, role: p.role })),
+      team2Players: team2.map(p => ({ id: p.id, name: p.name, role: p.role })),
+      captain1, vc1, captain2, vc2,
+      savedAt: serverTimestamp(),
+    });
+    setSavingLineup(false);
+    setLineupSaved(true);
+    setTimeout(() => setLineupSaved(false), 2500);
+  }
+
+  function loadLineup(lineup) {
+    setTeam1Name(lineup.team1Name);
+    setTeam2Name(lineup.team2Name);
+    const t1 = lineup.team1Players || [];
+    const t2 = lineup.team2Players || [];
+    setTeam1(t1);
+    setTeam2(t2);
+    setCaptain1(lineup.captain1 || '');
+    setVc1(lineup.vc1 || '');
+    setCaptain2(lineup.captain2 || '');
+    setVc2(lineup.vc2 || '');
+    setSelectedIds([...t1.map(p => p.id), ...t2.map(p => p.id)]);
+    setShowLineupsModal(false);
+    setStep(2);
+  }
+
+  async function deleteLineup(id, e) {
+    e.stopPropagation();
+    await deleteDoc(doc(db, 'savedLineups', id));
   }
 
   function flipCoin() {
@@ -337,6 +388,22 @@ export default function NewMatch() {
                 style={{ colorScheme: 'dark' }}
               />
             </div>
+            {savedLineups.length > 0 && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 10 }}>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                  <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>or load saved lineup</span>
+                  <div style={{ flex: 1, height: 1, background: 'rgba(255,255,255,0.08)' }} />
+                </div>
+                <button
+                  className="btn btn-secondary btn-full"
+                  onClick={() => setShowLineupsModal(true)}
+                >
+                  📂 Quick Re-match ({savedLineups.length} saved)
+                </button>
+              </div>
+            )}
+
             <button
               className="btn btn-primary btn-full mt-16"
               disabled={!team1Name.trim() || !team2Name.trim()}
@@ -612,32 +679,51 @@ export default function NewMatch() {
               })}
             </div>
 
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button className="btn btn-secondary" style={{ flex: 1 }} onClick={reshuffleTeams}>
+            {lineupSaved && (
+              <div style={{
+                marginBottom: 10, padding: '8px 14px', borderRadius: 10,
+                background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+                color: '#4ade80', fontSize: '0.82rem', textAlign: 'center', fontWeight: 600,
+              }}>
+                ✓ Lineup saved! Load it anytime from Quick Re-match
+              </div>
+            )}
+
+            <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+              <button
+                className="btn btn-secondary"
+                style={{ flex: 1, fontSize: '0.82rem' }}
+                disabled={savingLineup}
+                onClick={saveLineup}
+              >
+                {savingLineup ? 'Saving…' : '💾 Save Lineup'}
+              </button>
+              <button className="btn btn-secondary" style={{ flex: 1, fontSize: '0.82rem' }} onClick={reshuffleTeams}>
                 🔀 Reshuffle
               </button>
-              {scheduledAt ? (
-                <button className="btn btn-primary" style={{ flex: 2 }} disabled={saving} onClick={async () => {
-                  setSaving(true);
-                  try {
-                    await addDoc(collection(db, 'matches'), {
-                      meta: buildMatchMeta('upcoming'),
-                      innings: [],
-                      currentInnings: 0,
-                      createdAt: serverTimestamp(),
-                    });
-                    navigate('/');
-                  } catch (err) { alert('Error.'); console.error(err); }
-                  setSaving(false);
-                }}>
-                  {saving ? 'Saving…' : '📅 Save as Upcoming'}
-                </button>
-              ) : (
-                <button className="btn btn-primary" style={{ flex: 2 }} onClick={() => setStep(3)}>
-                  Proceed to Toss →
-                </button>
-              )}
             </div>
+
+            {scheduledAt ? (
+              <button className="btn btn-primary btn-full" disabled={saving} onClick={async () => {
+                setSaving(true);
+                try {
+                  await addDoc(collection(db, 'matches'), {
+                    meta: buildMatchMeta('upcoming'),
+                    innings: [],
+                    currentInnings: 0,
+                    createdAt: serverTimestamp(),
+                  });
+                  navigate('/');
+                } catch (err) { alert('Error.'); console.error(err); }
+                setSaving(false);
+              }}>
+                {saving ? 'Saving…' : '📅 Save as Upcoming'}
+              </button>
+            ) : (
+              <button className="btn btn-primary btn-full" onClick={() => setStep(3)}>
+                Proceed to Toss →
+              </button>
+            )}
           </div>
         )}
 
@@ -734,6 +820,79 @@ export default function NewMatch() {
           </div>
         )}
       </div>
+
+      {/* ── Saved Lineups Modal ── */}
+      {showLineupsModal && (
+        <div className="modal-overlay">
+          <div className="modal-sheet" style={{ maxHeight: '80vh', overflowY: 'auto' }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 4 }}>
+              <div className="modal-title" style={{ flex: 1, margin: 0 }}>Saved Lineups</div>
+              <button
+                onClick={() => setShowLineupsModal(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', fontSize: '1.2rem', cursor: 'pointer', padding: '4px 8px' }}
+              >✕</button>
+            </div>
+            <div className="text-muted" style={{ fontSize: '0.78rem', marginBottom: 16 }}>
+              Tap a lineup to load both teams and skip straight to Step 3
+            </div>
+
+            {savedLineups.length === 0 ? (
+              <div className="text-muted text-center" style={{ padding: 20 }}>No saved lineups yet</div>
+            ) : savedLineups.map(lineup => (
+              <div
+                key={lineup.id}
+                onClick={() => loadLineup(lineup)}
+                style={{
+                  padding: '12px 14px', borderRadius: 12, marginBottom: 10, cursor: 'pointer',
+                  border: '1px solid rgba(56,189,248,0.18)',
+                  background: 'linear-gradient(135deg, rgba(56,189,248,0.06) 0%, rgba(139,92,246,0.04) 100%)',
+                  transition: 'all 0.15s',
+                }}
+              >
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  <div style={{ flex: 1, fontWeight: 700, fontSize: '0.9rem' }}>
+                    <span style={{ color: '#38bdf8' }}>{lineup.team1Name}</span>
+                    <span style={{ color: 'rgba(255,255,255,0.3)', margin: '0 6px', fontSize: '0.78rem' }}>vs</span>
+                    <span style={{ color: '#a78bfa' }}>{lineup.team2Name}</span>
+                  </div>
+                  <button
+                    onClick={e => deleteLineup(lineup.id, e)}
+                    style={{ background: 'none', border: 'none', color: 'var(--danger-light)', fontSize: '0.9rem', cursor: 'pointer', padding: '2px 6px', opacity: 0.6 }}
+                  >🗑️</button>
+                </div>
+                <div style={{ display: 'flex', gap: 12 }}>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.62rem', color: '#38bdf8', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {lineup.team1Name} · {(lineup.team1Players || []).length} players
+                    </div>
+                    {(lineup.team1Players || []).slice(0, 4).map(p => (
+                      <div key={p.id} style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{p.name}</div>
+                    ))}
+                    {(lineup.team1Players || []).length > 4 && (
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>+{(lineup.team1Players || []).length - 4} more</div>
+                    )}
+                  </div>
+                  <div style={{ width: 1, background: 'rgba(255,255,255,0.06)' }} />
+                  <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: '0.62rem', color: '#a78bfa', fontWeight: 700, marginBottom: 4, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                      {lineup.team2Name} · {(lineup.team2Players || []).length} players
+                    </div>
+                    {(lineup.team2Players || []).slice(0, 4).map(p => (
+                      <div key={p.id} style={{ fontSize: '0.75rem', color: 'rgba(255,255,255,0.65)', marginBottom: 2 }}>{p.name}</div>
+                    ))}
+                    {(lineup.team2Players || []).length > 4 && (
+                      <div style={{ fontSize: '0.7rem', color: 'rgba(255,255,255,0.3)' }}>+{(lineup.team2Players || []).length - 4} more</div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ marginTop: 8, fontSize: '0.65rem', color: 'rgba(255,255,255,0.2)', textAlign: 'right' }}>
+                  Tap to load →
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </>
   );
 }
