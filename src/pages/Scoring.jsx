@@ -246,6 +246,12 @@ export default function Scoring() {
   const innings = match?.innings?.[match?.currentInnings];
   const meta = match?.meta;
 
+  useEffect(() => {
+    if (meta?.status === 'completed' && isAdmin && !meta?.potm) {
+      setShowPOTM(true);
+    }
+  }, [meta?.status, meta?.potm, isAdmin]);
+
   // Need bowler selection
   const inn1Target = match?.currentInnings === 1 && match?.innings?.length >= 1
     ? match.innings[0].runs + 1 : null;
@@ -472,7 +478,7 @@ export default function Scoring() {
     const inn2Complete = isInningsComplete(inn2, meta.overs, target);
     const isCompleted = meta.status === 'completed';
 
-    if (isCompleted && !showPOTM) {
+    if (isCompleted && (meta.potm || !isAdmin)) {
       return navigate(`/match/${id}/scorecard`);
     }
 
