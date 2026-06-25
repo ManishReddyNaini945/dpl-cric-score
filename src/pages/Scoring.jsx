@@ -298,8 +298,9 @@ export default function Scoring() {
     const complete = isInningsComplete(updated, meta.overs, inn2Target);
     if (complete) updated.complete = true;
 
-    // End of over — need new bowler
-    const endedOver = updated.legalBalls % 6 === 0 && updated.legalBalls > 0 && !complete;
+    // End of over — need new bowler (only legal deliveries can end an over)
+    const isLegal = type !== 'wide' && type !== 'noball';
+    const endedOver = isLegal && updated.legalBalls % 6 === 0 && updated.legalBalls > 0 && !complete;
 
     if (complete) {
       await handleInningsEnd(updated);
@@ -352,7 +353,7 @@ export default function Scoring() {
     const complete = isInningsComplete(updated, meta.overs, inn2Target);
     if (complete) updated.complete = true;
 
-    const endedOver = updated.legalBalls % 6 === 0 && updated.legalBalls > 0 && !complete;
+    const endedOver = type !== 'noball' && updated.legalBalls % 6 === 0 && updated.legalBalls > 0 && !complete;
 
     if (complete) {
       await handleInningsEnd(updated);
